@@ -19,8 +19,8 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     }
 
     try {
-      // Vérification simple côté client - décoder le JWT sans vérifier la signature
-      const payload = JSON.parse(atob(token.split('.')[1]));
+      // Vérification simple côté client - décoder le token base64
+      const payload = JSON.parse(atob(token));
       const now = Math.floor(Date.now() / 1000);
       
       if (payload.exp && payload.exp < now) {

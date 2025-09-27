@@ -1,0 +1,145 @@
+/* Variables CSS pour les thèmes */
+:root {
+  /* Mode clair (par défaut) */
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F7F7F7;
+  --bg-tertiary: #F0F0F0;
+  --text-primary: #0B0C10;
+  --text-secondary: #666666;
+  --text-tertiary: #999999;
+  --border-primary: #E5E5E5;
+  --border-secondary: #D0D0D0;
+  --accent-red: #EF476F;
+  --accent-blue: #118AB2;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="dark"] {
+  /* Mode sombre */
+  --bg-primary: #0B0C10;
+  --bg-secondary: #1C1C1C;
+  --bg-tertiary: #2A2A2A;
+  --text-primary: #FFFFFF;
+  --text-secondary: #CCCCCC;
+  --text-tertiary: #999999;
+  --border-primary: #333333;
+  --border-secondary: #444444;
+  --accent-red: #EF476F;
+  --accent-blue: #118AB2;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.3);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.3);
+}
+
+/* Transitions pour le changement de thème */
+.theme-transition * {
+  transition: 
+    background-color 0.3s ease,
+    border-color 0.3s ease,
+    color 0.3s ease,
+    box-shadow 0.3s ease,
+    opacity 0.3s ease,
+    transform 0.3s ease !important;
+}
+
+/* Classes utilitaires pour les thèmes */
+.bg-theme-primary {
+  background-color: var(--bg-primary);
+}
+
+.bg-theme-secondary {
+  background-color: var(--bg-secondary);
+}
+
+.bg-theme-tertiary {
+  background-color: var(--bg-tertiary);
+}
+
+.text-theme-primary {
+  color: var(--text-primary);
+}
+
+.text-theme-secondary {
+  color: var(--text-secondary);
+}
+
+.text-theme-tertiary {
+  color: var(--text-tertiary);
+}
+
+.border-theme-primary {
+  border-color: var(--border-primary);
+}
+
+.border-theme-secondary {
+  border-color: var(--border-secondary);
+}
+
+.shadow-theme-sm {
+  box-shadow: var(--shadow-sm);
+}
+
+.shadow-theme-md {
+  box-shadow: var(--shadow-md);
+}
+
+.shadow-theme-lg {
+  box-shadow: var(--shadow-lg);
+}
+
+.shadow-theme-xl {
+  box-shadow: var(--shadow-xl);
+}
+
+/* Classes spécifiques pour l'admin */
+.admin-card {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  box-shadow: var(--shadow-md);
+}
+
+.admin-input {
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  color: var(--text-primary);
+}
+
+.admin-input:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(17, 138, 178, 0.1);
+}
+
+.admin-button-primary {
+  background: linear-gradient(135deg, var(--accent-blue), #0F7A9B);
+  color: white;
+  border: none;
+}
+
+.admin-button-primary:hover {
+  background: linear-gradient(135deg, #0F7A9B, var(--accent-blue));
+}
+
+.admin-button-secondary {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-primary);
+}
+
+.admin-button-secondary:hover {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-secondary);
+}
+
+.admin-button-danger {
+  background-color: var(--accent-red);
+  color: white;
+  border: none;
+}
+
+.admin-button-danger:hover {
+  background-color: #D63E5F;
+}
