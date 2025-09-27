@@ -8,13 +8,8 @@
     "build": "vite build",
     "build:server": "tsc -p tsconfig.server.json",
     "build:all": "npm run build && npm run build:server",
-    "build:server": "tsc -p tsconfig.server.json",
-    "build:all": "npm run build && npm run build:server",
     "lint": "eslint .",
     "preview": "vite preview",
-    "server": "node server.js",
-    "start": "npm run build:all && npm run server",
-    "dev:full": "concurrently \"npm run dev\" \"npm run build:server && npm run server\""
     "server": "node server-with-demo-data.js",
     "start": "npm run build:all && npm run server",
     "dev:full": "concurrently \"npm run dev\" \"npm run build:server && npm run server\""
