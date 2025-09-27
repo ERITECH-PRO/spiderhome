@@ -1,19 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Eye, 
-  Search, 
-  Filter, 
-  MoreVertical,
-  Package,
-  Tag,
-  Calendar,
-  ArrowRight,
-  Sparkles
-} from 'lucide-react';
+import { Plus, CreditCard as Edit, Trash2, Eye, Search, Filter, MoreVertical, Package, Tag, Calendar, ArrowRight, Sparkles } from 'lucide-react';
 
 interface Product {
   id: number;
