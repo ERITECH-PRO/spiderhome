@@ -1,14 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Eye, 
-  Search,
-  ArrowUp,
-  ArrowDown
-} from 'lucide-react';
+import { Plus, CreditCard as Edit, Trash2, Eye, Search, ArrowUp, ArrowDown } from 'lucide-react';
 
 interface Slide {
   id: number;

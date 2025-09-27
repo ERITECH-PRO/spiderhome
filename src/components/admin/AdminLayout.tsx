@@ -1,17 +1,6 @@
 import { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Package, 
-  Image, 
-  FileText, 
-  Settings, 
-  LogOut, 
-  Menu, 
-  X,
-  Home,
-  BarChart3
-} from 'lucide-react';
+import { LayoutDashboard, Package, Image, FileText, Settings, LogOut, Menu, X, Hop as Home, ChartBar as BarChart3 } from 'lucide-react';
 
 const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
