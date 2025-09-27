@@ -14,13 +14,13 @@ import TestNavigation from './pages/TestNavigation';
 import SimpleTest from './pages/SimpleTest';
 import Login from './pages/admin/Login';
 import Dashboard from './pages/admin/Dashboard';
-import Products from './pages/admin/Products';
+import AdminProducts from './pages/admin/Products';
 import ProductForm from './pages/admin/ProductForm';
 import Slides from './pages/admin/Slides';
 import SlideForm from './pages/admin/SlideForm';
 import BlogAdmin from './pages/admin/Blog';
 import BlogForm from './pages/admin/BlogForm';
-import Features from './pages/admin/Features';
+import AdminFeatures from './pages/admin/Features';
 import FeatureForm from './pages/admin/FeatureForm';
 import AdminLayout from './components/admin/AdminLayout';
 import ProtectedRoute from './components/admin/ProtectedRoute';
@@ -61,7 +61,7 @@ const AdminApp = () => {
             <AdminLayout>
               <Routes>
                 <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/dashboard/products" element={<Products />} />
+                <Route path="/dashboard/products" element={<AdminProducts />} />
                 <Route path="/dashboard/products/new" element={<ProductForm />} />
                 <Route path="/dashboard/products/:id/edit" element={<ProductForm />} />
                 <Route path="/dashboard/slides" element={<Slides />} />
@@ -70,7 +70,7 @@ const AdminApp = () => {
                 <Route path="/dashboard/blog" element={<BlogAdmin />} />
                 <Route path="/dashboard/blog/new" element={<BlogForm />} />
                 <Route path="/dashboard/blog/:id/edit" element={<BlogForm />} />
-                <Route path="/dashboard/features" element={<Features />} />
+                <Route path="/dashboard/features" element={<AdminFeatures />} />
                 <Route path="/dashboard/features/new" element={<FeatureForm />} />
                 <Route path="/dashboard/features/:id/edit" element={<FeatureForm />} />
                 <Route path="/" element={<Dashboard />} />
