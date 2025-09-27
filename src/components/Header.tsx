@@ -31,13 +31,12 @@ const Header = () => {
       <nav className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
+          <Link to="/" className="flex items-center">
             <img 
               src="/LOGO SPIDERHOME SANS FONT@1080x.png" 
               alt="SpiderHome Logo" 
-              className="h-8 w-auto"
+              className="h-16 w-auto"
             />
-            <span className="text-2xl font-bold text-[#0B0C10]">SpiderHome</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -58,12 +57,18 @@ const Header = () => {
           </div>
 
           {/* CTA Button */}
-          <div className="hidden lg:block">
+          <div className="hidden lg:block flex space-x-4">
             <Link
               to="/contact"
               className="bg-[#EF476F] text-white px-6 py-3 rounded-lg font-semibold hover:bg-opacity-90 transition-all duration-200 transform hover:scale-105 shadow-lg"
             >
               Demander une démo
+            </Link>
+            <Link
+              to="/produits/interface-signalisation-wifi"
+              className="bg-[#118AB2] text-white px-6 py-3 rounded-lg font-semibold hover:bg-opacity-90 transition-all duration-200 transform hover:scale-105 shadow-lg"
+            >
+              Test Produit
             </Link>
           </div>
 

@@ -31,13 +31,12 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Logo et description */}
           <div className="lg:col-span-2">
-            <div className="flex items-center space-x-2 mb-4">
+            <div className="flex items-center mb-4">
               <img 
                 src="/LOGO SPIDERHOME SANS FONT@1080x.png" 
                 alt="SpiderHome Logo" 
-                className="h-8 w-auto filter invert"
+                className="h-20 w-auto filter invert"
               />
-              <span className="text-2xl font-bold">SpiderHome</span>
             </div>
             <p className="text-gray-300 mb-6 max-w-md">
               Votre solution domotique intelligente pour une maison connectée, 

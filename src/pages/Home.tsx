@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Lightbulb, Thermometer, Shield, Smartphone, Zap, Home } from 'lucide-react';
+import HeroSlider from '../components/HeroSlider';
 
 const HomePage = () => {
   const features = [
@@ -29,53 +30,9 @@ const HomePage = () => {
   ];
 
   return (
-    <div className="pt-20">
-      {/* Hero Section */}
-      <section className="bg-gradient-to-br from-[#0B0C10] via-gray-900 to-[#118AB2] text-white py-20 relative overflow-hidden">
-        <div className="absolute inset-0 bg-black bg-opacity-20"></div>
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div className="text-center lg:text-left">
-              <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
-                Votre maison,{' '}
-                <span className="text-[#EF476F]">connectée intelligemment</span>
-              </h1>
-              <p className="text-xl mb-8 text-gray-200 leading-relaxed">
-                Découvrez SpiderHome, la solution domotique qui transforme votre habitat 
-                en maison intelligente. Contrôlez tout depuis votre smartphone.
-              </p>
-              <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-6">
-                <Link
-                  to="/contact"
-                  className="bg-[#EF476F] text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-opacity-90 transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center justify-center"
-                >
-                  Demander une démo
-                  <ArrowRight className="ml-2 w-5 h-5" />
-                </Link>
-                <Link
-                  to="/fonctionnalites"
-                  className="border-2 border-white text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-white hover:text-[#0B0C10] transition-all duration-200 text-center"
-                >
-                  Découvrir
-                </Link>
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="relative">
-                <div className="w-80 h-80 mx-auto bg-gradient-to-br from-[#118AB2] to-[#EF476F] rounded-full flex items-center justify-center shadow-2xl">
-                  <Home className="w-32 h-32 text-white" />
-                </div>
-                <div className="absolute -top-4 -right-4 w-16 h-16 bg-[#EF476F] rounded-full flex items-center justify-center animate-pulse">
-                  <Smartphone className="w-8 h-8 text-white" />
-                </div>
-                <div className="absolute -bottom-4 -left-4 w-16 h-16 bg-[#118AB2] rounded-full flex items-center justify-center animate-pulse">
-                  <Zap className="w-8 h-8 text-white" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+    <div>
+      {/* Hero Slider */}
+      <HeroSlider />
 
       {/* Features Overview */}
       <section className="py-20 bg-white">

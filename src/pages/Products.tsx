@@ -1,146 +1,100 @@
-import React from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Lightbulb, 
-  Thermometer, 
-  Camera, 
-  Smartphone,
-  Wifi,
-  Battery,
-  Shield,
-  Zap,
-  ArrowRight,
-  CheckCircle
-} from 'lucide-react';
+import { ArrowRight, Filter, SortAsc, Grid, List, X } from 'lucide-react';
+import { categories, getProductsByCategory } from '../data/products';
+import type { Product } from '../data/products';
+import SEO from '../components/SEO';
+import LazyImage from '../components/LazyImage';
 
 const Products = () => {
-  const productCategories = [
-    {
-      title: 'Éclairage connecté',
-      icon: Lightbulb,
-      description: 'Transformez l\'éclairage de votre maison avec nos solutions intelligentes',
-      products: [
-        {
-          name: 'Ampoules LED connectées',
-          description: 'Contrôle d\'intensité et couleur, 16 millions de teintes',
-          features: ['Durée de vie 25 ans', 'Économie 80%', 'Compatible Alexa/Google'],
-          price: 'À partir de 24.90€'
-        },
-        {
-          name: 'Interrupteurs intelligents',
-          description: 'Remplacent vos interrupteurs traditionnels',
-          features: ['Installation sans neutre', 'Programmation horaire', 'Contrôle vocal'],
-          price: 'À partir de 49.90€'
-        },
-        {
-          name: 'Variateurs connectés',
-          description: 'Contrôle précis de l\'intensité lumineuse',
-          features: ['Compatible LED/Halogène', 'Fonction mémoire', 'Design élégant'],
-          price: 'À partir de 69.90€'
-        }
-      ]
-    },
-    {
-      title: 'Gestion climatique',
-      icon: Thermometer,
-      description: 'Optimisez le confort et les économies d\'énergie',
-      products: [
-        {
-          name: 'Thermostat connecté',
-          description: 'Contrôle intelligent du chauffage et climatisation',
-          features: ['Apprentissage automatique', 'Géolocalisation', 'Économies 23%'],
-          price: 'À partir de 199.90€'
-        },
-        {
-          name: 'Capteurs de température',
-          description: 'Surveillance précise de chaque pièce',
-          features: ['Sans fil', 'Autonomie 2 ans', 'Alertes personnalisées'],
-          price: 'À partir de 39.90€'
-        },
-        {
-          name: 'Vannes thermostatiques',
-          description: 'Contrôle individuel par radiateur',
-          features: ['Installation simple', 'Programmation pièce par pièce', 'Économies ciblées'],
-          price: 'À partir de 79.90€'
-        }
-      ]
-    },
-    {
-      title: 'Sécurité & Surveillance',
-      icon: Camera,
-      description: 'Protégez votre foyer avec nos systèmes de sécurité avancés',
-      products: [
-        {
-          name: 'Caméras de surveillance',
-          description: 'Surveillance HD avec vision nocturne',
-          features: ['4K Ultra HD', 'Détection de mouvement IA', 'Stockage cloud'],
-          price: 'À partir de 149.90€'
-        },
-        {
-          name: 'Détecteurs de mouvement',
-          description: 'Capteurs intelligents multi-zones',
-          features: ['Portée 12m', 'Immunité animaux', 'Alertes instantanées'],
-          price: 'À partir de 59.90€'
-        },
-        {
-          name: 'Capteurs d\'ouverture',
-          description: 'Surveillance portes et fenêtres',
-          features: ['Design discret', 'Batterie longue durée', 'Installation adhésive'],
-          price: 'À partir de 29.90€'
-        }
-      ]
-    },
-    {
-      title: 'Hub & Contrôleurs',
-      icon: Smartphone,
-      description: 'Le cerveau de votre maison connectée',
-      products: [
-        {
-          name: 'Hub central SpiderHome',
-          description: 'Centre de contrôle principal de votre installation',
-          features: ['Protocoles multiples', 'Interface tactile', 'Sauvegarde cloud'],
-          price: 'À partir de 299.90€'
-        },
-        {
-          name: 'Télécommandes universelles',
-          description: 'Contrôlez tous vos appareils depuis une télécommande',
-          features: ['Écran OLED', 'Reconnaissance vocale', 'Personnalisable'],
-          price: 'À partir de 129.90€'
-        }
-      ]
-    }
-  ];
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [sortBy, setSortBy] = useState<'name' | 'reference' | 'new'>('name');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [showFilters, setShowFilters] = useState(false);
 
-  const compatibleBrands = [
-    'Philips Hue', 'Amazon Alexa', 'Google Home', 'Apple HomeKit',
-    'Samsung SmartThings', 'Nest', 'Sonos', 'Ring'
-  ];
+  const filteredProducts = useMemo(() => {
+    let filtered = getProductsByCategory(selectedCategory);
+    
+    // Tri
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'reference':
+          return a.reference.localeCompare(b.reference);
+        case 'new':
+          return (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0);
+        default:
+          return 0;
+      }
+    });
+    
+    console.log('Produits filtrés:', filtered);
+    return filtered;
+  }, [selectedCategory, sortBy]);
 
-  const installationSteps = [
-    {
-      step: 1,
-      title: 'Consultation gratuite',
-      description: 'Évaluation personnalisée de vos besoins et de votre habitation'
-    },
-    {
-      step: 2,
-      title: 'Devis détaillé',
-      description: 'Proposition technique et commerciale adaptée à votre budget'
-    },
-    {
-      step: 3,
-      title: 'Installation professionnelle',
-      description: 'Pose par nos techniciens certifiés en moins de 4 heures'
-    },
-    {
-      step: 4,
-      title: 'Configuration & formation',
-      description: 'Paramétrage complet et formation à l\'utilisation'
-    }
-  ];
+  const ProductCard = ({ product }: { product: Product }) => {
+    const handleClick = (e: React.MouseEvent) => {
+      e.preventDefault();
+      console.log('Navigation vers:', `/produits/${product.slug}`);
+      console.log('Produit:', product);
+      window.location.href = `/produits/${product.slug}`;
+    };
+
+    return (
+      <div
+        onClick={handleClick}
+        className="group block bg-white rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden cursor-pointer"
+      >
+        <div className="relative">
+          {/* Image du produit */}
+          <div className="aspect-square bg-gray-50 flex items-center justify-center p-4">
+            <img
+              src={product.images[0]?.url || '/placeholder-product.jpg'}
+              alt={product.images[0]?.alt || product.name}
+              className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+              loading="lazy"
+            />
+          </div>
+          
+          {/* Badge Nouveau */}
+          {product.isNew && (
+            <div className="absolute top-2 left-2 bg-[#EF476F] text-white text-xs px-2 py-1 rounded-full font-medium">
+              NOUVEAU
+            </div>
+          )}
+        </div>
+        
+        {/* Contenu de la carte */}
+        <div className="p-4">
+          {/* Nom du produit */}
+          <h3 className="text-sm font-bold text-[#0B0C10] mb-2 uppercase leading-tight line-clamp-2">
+            {product.name}
+          </h3>
+          
+          {/* Référence */}
+          <p className="text-xs text-[#0B0C10] mb-3 opacity-75">
+            {product.reference}
+          </p>
+          
+          {/* Lien "Pour en savoir plus" */}
+          <span className="inline-block text-[#118AB2] hover:text-[#EF476F] text-sm font-medium transition-colors duration-200">
+            Pour en savoir plus
+          </span>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="pt-20">
+      <SEO
+        title="Produits & Modules SpiderHome - Domotique Intelligente"
+        description="Découvrez notre gamme complète de dispositifs connectés pour transformer votre maison en habitat intelligent et économe. Interfaces, éclairage, sécurité, climatisation."
+        keywords="domotique, maison connectée, SpiderHome, produits, modules, éclairage intelligent, sécurité, thermostat"
+        url="/produits"
+      />
+      
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-[#0B0C10] to-[#118AB2] text-white py-20">
         <div className="container mx-auto px-4">
@@ -156,142 +110,127 @@ const Products = () => {
         </div>
       </section>
 
-      {/* Product Categories */}
-      {productCategories.map((category, categoryIndex) => (
-        <section key={categoryIndex} className="py-20 bg-white">
+      {/* Filtres et contrôles */}
+      <section className="py-8 bg-white border-b">
           <div className="container mx-auto px-4">
-            <div className="text-center mb-16">
-              <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-[#EF476F] to-[#118AB2] rounded-full flex items-center justify-center">
-                <category.icon className="w-8 h-8 text-white" />
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+            {/* Filtres mobiles */}
+            <div className="lg:hidden w-full">
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center gap-2 bg-[#118AB2] text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition-colors"
+              >
+                <Filter className="w-4 h-4" />
+                Filtres
+              </button>
               </div>
-              <h2 className="text-4xl font-bold text-[#0B0C10] mb-4">
-                {category.title}
-              </h2>
-              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                {category.description}
-              </p>
+
+            {/* Filtres desktop */}
+            <div className="hidden lg:flex items-center gap-4">
+              <span className="text-sm font-medium text-[#0B0C10]">Catégorie:</span>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#118AB2]"
+              >
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {category.products.map((product, productIndex) => (
-                <div
-                  key={productIndex}
-                  className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-xl transition-all duration-300 group"
+            {/* Contrôles de tri et vue */}
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <SortAsc className="w-4 h-4 text-[#0B0C10]" />
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as 'name' | 'reference' | 'new')}
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#118AB2]"
                 >
-                  <h3 className="text-xl font-semibold text-[#0B0C10] mb-3">
-                    {product.name}
-                  </h3>
-                  <p className="text-gray-600 mb-6">{product.description}</p>
-                  
-                  <ul className="space-y-2 mb-6">
-                    {product.features.map((feature, featureIndex) => (
-                      <li key={featureIndex} className="flex items-center space-x-3">
-                        <CheckCircle className="w-4 h-4 text-[#118AB2]" />
-                        <span className="text-gray-700 text-sm">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  
-                  <div className="flex justify-between items-center">
-                    <span className="text-lg font-bold text-[#EF476F]">
-                      {product.price}
-                    </span>
-                    <button className="bg-[#118AB2] text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition-colors duration-200 group-hover:scale-105">
-                      En savoir plus
+                  <option value="name">Nom</option>
+                  <option value="reference">Référence</option>
+                  <option value="new">Nouveautés</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-1 border border-gray-300 rounded-lg p-1">
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`p-2 rounded ${viewMode === 'grid' ? 'bg-[#118AB2] text-white' : 'text-gray-600'}`}
+                >
+                  <Grid className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`p-2 rounded ${viewMode === 'list' ? 'bg-[#118AB2] text-white' : 'text-gray-600'}`}
+                >
+                  <List className="w-4 h-4" />
                     </button>
                   </div>
-                </div>
-              ))}
             </div>
           </div>
-        </section>
-      ))}
 
-      {/* Compatible Brands */}
-      <section className="py-20 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-[#0B0C10] mb-6">
-              Compatibilité universelle
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              SpiderHome s'intègre parfaitement avec plus de 1000 marques et appareils 
-              connectés déjà présents sur le marché.
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {compatibleBrands.map((brand, index) => (
-              <div
-                key={index}
-                className="bg-white p-6 rounded-xl text-center shadow-md hover:shadow-lg transition-all duration-300"
+          {/* Filtres mobiles (collapsible) */}
+          {showFilters && (
+            <div className="lg:hidden mt-4 p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between mb-3">
+                <span className="font-medium text-[#0B0C10]">Filtres</span>
+                <button
+                  onClick={() => setShowFilters(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#118AB2]"
               >
-                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
-                  <Wifi className="w-8 h-8 text-[#118AB2]" />
-                </div>
-                <span className="font-medium text-[#0B0C10]">{brand}</span>
-              </div>
-            ))}
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
           </div>
+          )}
         </div>
       </section>
 
-      {/* Installation Process */}
-      <section className="py-20 bg-white">
+      {/* Grille des produits */}
+      <section className="py-12 bg-gray-50">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-[#0B0C10] mb-6">
-              Processus d'installation
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              De la première consultation à la mise en service, nous vous accompagnons 
-              à chaque étape pour une installation parfaite.
+          {/* Résultats */}
+          <div className="mb-6">
+            <p className="text-sm text-gray-600">
+              {filteredProducts.length} produit{filteredProducts.length > 1 ? 's' : ''} trouvé{filteredProducts.length > 1 ? 's' : ''}
+              {selectedCategory !== 'all' && (
+                <span> dans la catégorie "{categories.find(c => c.id === selectedCategory)?.name}"</span>
+              )}
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {installationSteps.map((step, index) => (
-              <div key={index} className="text-center">
-                <div className="w-16 h-16 mx-auto mb-6 bg-[#EF476F] rounded-full flex items-center justify-center text-white font-bold text-xl">
-                  {step.step}
-                </div>
-                <h3 className="text-xl font-semibold text-[#0B0C10] mb-3">
-                  {step.title}
-                </h3>
-                <p className="text-gray-600">{step.description}</p>
-              </div>
+          {/* Grille responsive */}
+          <div className={`grid gap-6 ${
+            viewMode === 'grid' 
+              ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
+              : 'grid-cols-1'
+          }`}>
+            {filteredProducts.map((product) => (
+              <ProductCard key={product.id} product={product} />
             ))}
           </div>
-        </div>
-      </section>
 
-      {/* Features Grid */}
-      <section className="py-20 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-[#0B0C10] mb-6">
-              Avantages techniques
-            </h2>
+          {/* Message si aucun produit */}
+          {filteredProducts.length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-gray-500 text-lg">Aucun produit trouvé pour cette catégorie.</p>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {[
-              { icon: Wifi, title: 'Connectivité', desc: 'Wi-Fi 6, Bluetooth 5.0, Zigbee' },
-              { icon: Battery, title: 'Autonomie', desc: 'Jusqu\'à 5 ans sur batterie' },
-              { icon: Shield, title: 'Sécurité', desc: 'Chiffrement AES 256-bit' },
-              { icon: Zap, title: 'Performance', desc: 'Temps de réponse < 100ms' }
-            ].map((feature, index) => (
-              <div key={index} className="bg-white p-6 rounded-xl text-center shadow-md">
-                <div className="w-12 h-12 mx-auto mb-4 bg-gradient-to-br from-[#EF476F] to-[#118AB2] rounded-full flex items-center justify-center">
-                  <feature.icon className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-lg font-semibold text-[#0B0C10] mb-2">
-                  {feature.title}
-                </h3>
-                <p className="text-gray-600 text-sm">{feature.desc}</p>
-              </div>
-            ))}
-          </div>
+          )}
         </div>
       </section>
 
