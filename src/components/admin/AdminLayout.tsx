@@ -19,7 +19,7 @@ import {
 import ThemeToggle from './ThemeToggle';
 import { useTheme } from '../../contexts/ThemeContext';
 
-const AdminLayout = () => {
+const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   const { isDark } = useTheme();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -28,7 +28,7 @@ const AdminLayout = () => {
   const handleLogout = () => {
     localStorage.removeItem('admin_token');
     localStorage.removeItem('admin_user');
-    window.location.href = '/admin';
+    window.location.href = '/admin/login';
   };
 
   const menuItems = [
@@ -350,7 +350,7 @@ const AdminLayout = () => {
           <div className={`p-6 transition-colors ${
             isDark ? 'bg-transparent' : 'bg-gray-50/50'
           }`}>
-            <Outlet />
+            {children}
           </div>
         </main>
       </div>

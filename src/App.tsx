@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
+import { ThemeProvider } from './contexts/ThemeContext';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Home from './pages/Home';
@@ -11,6 +12,18 @@ import Blog from './pages/Blog';
 import Contact from './pages/Contact';
 import TestNavigation from './pages/TestNavigation';
 import SimpleTest from './pages/SimpleTest';
+import Login from './pages/admin/Login';
+import Dashboard from './pages/admin/Dashboard';
+import Products from './pages/admin/Products';
+import ProductForm from './pages/admin/ProductForm';
+import Slides from './pages/admin/Slides';
+import SlideForm from './pages/admin/SlideForm';
+import BlogAdmin from './pages/admin/Blog';
+import BlogForm from './pages/admin/BlogForm';
+import Features from './pages/admin/Features';
+import FeatureForm from './pages/admin/FeatureForm';
+import AdminLayout from './components/admin/AdminLayout';
+import ProtectedRoute from './components/admin/ProtectedRoute';
 import ScrollToTop from './components/ScrollToTop';
 
 // Composant pour le site public (avec Header et Footer)
@@ -40,15 +53,33 @@ const PublicLayout = () => {
 // Composant pour l'interface admin (sans Header ni Footer)
 const AdminApp = () => {
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-8">
-      <h1 className="text-2xl font-bold">Interface Admin - Test</h1>
-      <p>Version simplifiée pour diagnostic</p>
-      <div className="mt-4">
-        <a href="/" className="text-blue-400 hover:text-blue-300">
-          Retour au site public
-        </a>
-      </div>
-    </div>
+    <ThemeProvider>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/*" element={
+          <ProtectedRoute>
+            <AdminLayout>
+              <Routes>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/dashboard/products" element={<Products />} />
+                <Route path="/dashboard/products/new" element={<ProductForm />} />
+                <Route path="/dashboard/products/:id/edit" element={<ProductForm />} />
+                <Route path="/dashboard/slides" element={<Slides />} />
+                <Route path="/dashboard/slides/new" element={<SlideForm />} />
+                <Route path="/dashboard/slides/:id/edit" element={<SlideForm />} />
+                <Route path="/dashboard/blog" element={<BlogAdmin />} />
+                <Route path="/dashboard/blog/new" element={<BlogForm />} />
+                <Route path="/dashboard/blog/:id/edit" element={<BlogForm />} />
+                <Route path="/dashboard/features" element={<Features />} />
+                <Route path="/dashboard/features/new" element={<FeatureForm />} />
+                <Route path="/dashboard/features/:id/edit" element={<FeatureForm />} />
+                <Route path="/" element={<Dashboard />} />
+              </Routes>
+            </AdminLayout>
+          </ProtectedRoute>
+        } />
+      </Routes>
+    </ThemeProvider>
   );
 };
 
