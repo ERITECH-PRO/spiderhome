@@ -5,50 +5,42 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 interface Slide {
   id: number;
   title: string;
-  ctaText: string;
-  ctaLink: string;
-  image: string;
-  alt: string;
+  subtitle: string;
+  cta_text: string;
+  cta_link: string;
+  image_url: string;
+  alt_text: string;
+  order_index: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 const HeroSlider = () => {
+  const [slides, setSlides] = useState<Slide[]>([]);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const [loading, setLoading] = useState(true);
 
-  const slides: Slide[] = [
-    {
-      id: 1,
-      title: "Votre maison, connectée intelligemment",
-      ctaText: "Demander une démo",
-      ctaLink: "/contact",
-      image: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1920&q=80",
-      alt: "Maison moderne connectée - Accueil et confort"
-    },
-    {
-      id: 2,
-      title: "Votre maison, sécurisée",
-      ctaText: "Découvrir la sécurité intelligente",
-      ctaLink: "/fonctionnalites",
-      image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1920&q=80",
-      alt: "Système de sécurité intelligent"
-    },
-    {
-      id: 3,
-      title: "Maîtrisez votre énergie",
-      ctaText: "Voir comment ça marche",
-      ctaLink: "/fonctionnalites",
-      image: "https://images.unsplash.com/photo-1466611653911-95081537e5b7?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1920&q=80",
-      alt: "Gestion intelligente de l'énergie"
-    },
-    {
-      id: 4,
-      title: "Des scénarios pour chaque moment",
-      ctaText: "Créer mes scénarios",
-      ctaLink: "/produits",
-      image: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1920&q=80",
-      alt: "Automatisation et scénarios domotiques"
-    }
-  ];
+  // Récupérer les slides depuis l'API
+  useEffect(() => {
+    const fetchSlides = async () => {
+      try {
+        const response = await fetch('/api/slides');
+        if (response.ok) {
+          const data = await response.json();
+          const activeSlides = data.filter((slide: Slide) => slide.is_active);
+          setSlides(activeSlides.sort((a: Slide, b: Slide) => a.order_index - b.order_index));
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des slides:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSlides();
+  }, []);
 
   // Auto-play functionality
   useEffect(() => {
@@ -80,6 +72,28 @@ const HeroSlider = () => {
     setTimeout(() => setIsAutoPlaying(true), 10000);
   };
 
+  if (loading) {
+    return (
+      <div className="relative h-screen w-full overflow-hidden bg-gray-900 flex items-center justify-center">
+        <div className="text-center text-white">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p>Chargement du carrousel...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (slides.length === 0) {
+    return (
+      <div className="relative h-screen w-full overflow-hidden bg-gray-900 flex items-center justify-center">
+        <div className="text-center text-white">
+          <h1 className="text-4xl font-bold mb-4">SpiderHome</h1>
+          <p className="text-xl">Votre maison connectée intelligemment</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative h-screen w-full overflow-hidden">
       {/* Slides */}
@@ -93,8 +107,8 @@ const HeroSlider = () => {
           >
             <div className="relative h-full w-full">
               <img
-                src={slide.image}
-                alt={slide.alt}
+                src={slide.image_url}
+                alt={slide.alt_text}
                 className="h-full w-full object-cover"
               />
               {/* Overlay */}
@@ -106,11 +120,16 @@ const HeroSlider = () => {
                   <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-8 leading-tight">
                     {slide.title}
                   </h1>
+                  {slide.subtitle && (
+                    <p className="text-xl md:text-2xl mb-8 text-gray-200">
+                      {slide.subtitle}
+                    </p>
+                  )}
                   <Link
-                    to={slide.ctaLink}
+                    to={slide.cta_link}
                     className="inline-block bg-[#EF476F] text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-opacity-90 transition-all duration-200 transform hover:scale-105 shadow-lg"
                   >
-                    {slide.ctaText}
+                    {slide.cta_text}
                   </Link>
                 </div>
               </div>

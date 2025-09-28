@@ -1,26 +1,42 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Lightbulb, Thermometer, Shield, Smartphone, Zap, Home } from 'lucide-react';
 import HeroSlider from '../components/HeroSlider';
 
+interface Feature {
+  id: number;
+  title: string;
+  description: string;
+  icon: string;
+  icon_url: string;
+  order_index: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 const HomePage = () => {
-  const features = [
-    {
-      icon: Lightbulb,
-      title: 'Éclairage intelligent',
-      description: 'Contrôlez l\'intensité et la couleur de vos lumières',
-    },
-    {
-      icon: Thermometer,
-      title: 'Thermostat connecté',
-      description: 'Gérez la température pour un confort optimal',
-    },
-    {
-      icon: Shield,
-      title: 'Sécurité avancée',
-      description: 'Surveillance et alertes en temps réel',
-    },
-  ];
+  const [features, setFeatures] = useState<Feature[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Récupérer les fonctionnalités depuis l'API
+  useEffect(() => {
+    const fetchFeatures = async () => {
+      try {
+        const response = await fetch('/api/features');
+        if (response.ok) {
+          const data = await response.json();
+          setFeatures(data.filter((f: Feature) => f.is_active));
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des fonctionnalités:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFeatures();
+  }, []);
 
   const stats = [
     { number: '10,000+', label: 'Maisons connectées' },
@@ -45,22 +61,33 @@ const HomePage = () => {
               SpiderHome vous offre un contrôle total sur votre environnement domestique
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {features.map((feature, index) => (
-              <div
-                key={index}
-                className="text-center p-8 rounded-xl bg-gray-50 hover:bg-white hover:shadow-xl transition-all duration-300 group"
-              >
-                <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-[#EF476F] to-[#118AB2] rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                  <feature.icon className="w-8 h-8 text-white" />
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#118AB2] mx-auto mb-4"></div>
+              <p className="text-gray-600">Chargement des fonctionnalités...</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {features.map((feature) => (
+                <div
+                  key={feature.id}
+                  className="text-center p-8 rounded-xl bg-gray-50 hover:bg-white hover:shadow-xl transition-all duration-300 group"
+                >
+                  <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-[#EF476F] to-[#118AB2] rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                    {feature.icon_url ? (
+                      <img src={feature.icon_url} alt={feature.title} className="w-8 h-8" />
+                    ) : (
+                      <Lightbulb className="w-8 h-8 text-white" />
+                    )}
+                  </div>
+                  <h3 className="text-xl font-semibold text-[#0B0C10] mb-4">
+                    {feature.title}
+                  </h3>
+                  <p className="text-gray-600">{feature.description}</p>
                 </div>
-                <h3 className="text-xl font-semibold text-[#0B0C10] mb-4">
-                  {feature.title}
-                </h3>
-                <p className="text-gray-600">{feature.description}</p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
           <div className="text-center mt-12">
             <Link
               to="/fonctionnalites"

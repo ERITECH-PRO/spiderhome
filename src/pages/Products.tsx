@@ -1,37 +1,91 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Filter, SortAsc, Grid, List, X } from 'lucide-react';
-import { categories, getProductsByCategory } from '../data/products';
-import type { Product } from '../data/products';
 import SEO from '../components/SEO';
 import LazyImage from '../components/LazyImage';
 
+interface Product {
+  id: number;
+  title: string;
+  slug: string;
+  reference: string;
+  category: string;
+  short_description: string;
+  long_description: string;
+  image_url: string;
+  specifications: any;
+  benefits: any;
+  downloads: any;
+  compatibility: any;
+  related_products: any;
+  is_new: boolean;
+  featured: boolean;
+  meta_title: string;
+  meta_description: string;
+  created_at: string;
+  updated_at: string;
+}
+
 const Products = () => {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [sortBy, setSortBy] = useState<'name' | 'reference' | 'new'>('name');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
 
+  // Récupérer les produits depuis l'API
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/admin/products');
+        if (!response.ok) {
+          throw new Error('Erreur lors du chargement des produits');
+        }
+        const data = await response.json();
+        setProducts(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Erreur inconnue');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
+  // Obtenir les catégories uniques depuis les produits
+  const categories = useMemo(() => {
+    const uniqueCategories = [...new Set(products.map(p => p.category))];
+    return uniqueCategories;
+  }, [products]);
+
   const filteredProducts = useMemo(() => {
-    let filtered = getProductsByCategory(selectedCategory);
+    let filtered = products;
+    
+    // Filtrage par catégorie
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(p => p.category === selectedCategory);
+    }
     
     // Tri
     filtered.sort((a, b) => {
       switch (sortBy) {
         case 'name':
-          return a.name.localeCompare(b.name);
+          return a.title.localeCompare(b.title);
         case 'reference':
           return a.reference.localeCompare(b.reference);
         case 'new':
-          return (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0);
+          return (b.is_new ? 1 : 0) - (a.is_new ? 1 : 0);
         default:
           return 0;
       }
     });
     
-    console.log('Produits filtrés:', filtered);
     return filtered;
-  }, [selectedCategory, sortBy]);
+  }, [products, selectedCategory, sortBy]);
 
   const ProductCard = ({ product }: { product: Product }) => {
     const handleClick = (e: React.MouseEvent) => {
@@ -50,15 +104,15 @@ const Products = () => {
           {/* Image du produit */}
           <div className="aspect-square bg-gray-50 flex items-center justify-center p-4">
             <img
-              src={product.images[0]?.url || '/placeholder-product.jpg'}
-              alt={product.images[0]?.alt || product.name}
+              src={product.image_url || '/placeholder-product.jpg'}
+              alt={product.title}
               className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
               loading="lazy"
             />
           </div>
           
           {/* Badge Nouveau */}
-          {product.isNew && (
+          {product.is_new && (
             <div className="absolute top-2 left-2 bg-[#EF476F] text-white text-xs px-2 py-1 rounded-full font-medium">
               NOUVEAU
             </div>
@@ -69,7 +123,7 @@ const Products = () => {
         <div className="p-4">
           {/* Nom du produit */}
           <h3 className="text-sm font-bold text-[#0B0C10] mb-2 uppercase leading-tight line-clamp-2">
-            {product.name}
+            {product.title}
           </h3>
           
           {/* Référence */}
@@ -133,9 +187,10 @@ const Products = () => {
                 onChange={(e) => setSelectedCategory(e.target.value)}
                 className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#118AB2]"
               >
+                <option value="all">Toutes les catégories</option>
                 {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
+                  <option key={category} value={category}>
+                    {category}
                   </option>
                 ))}
               </select>
@@ -190,9 +245,10 @@ const Products = () => {
                 onChange={(e) => setSelectedCategory(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#118AB2]"
               >
+                <option value="all">Toutes les catégories</option>
                 {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
+                  <option key={category} value={category}>
+                    {category}
                   </option>
                 ))}
               </select>
@@ -204,32 +260,51 @@ const Products = () => {
       {/* Grille des produits */}
       <section className="py-12 bg-gray-50">
         <div className="container mx-auto px-4">
-          {/* Résultats */}
-          <div className="mb-6">
-            <p className="text-sm text-gray-600">
-              {filteredProducts.length} produit{filteredProducts.length > 1 ? 's' : ''} trouvé{filteredProducts.length > 1 ? 's' : ''}
-              {selectedCategory !== 'all' && (
-                <span> dans la catégorie "{categories.find(c => c.id === selectedCategory)?.name}"</span>
-              )}
-            </p>
-          </div>
-          
-          {/* Grille responsive */}
-          <div className={`grid gap-6 ${
-            viewMode === 'grid' 
-              ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
-              : 'grid-cols-1'
-          }`}>
-            {filteredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-
-          {/* Message si aucun produit */}
-          {filteredProducts.length === 0 && (
+          {/* États de chargement et d'erreur */}
+          {loading && (
             <div className="text-center py-12">
-              <p className="text-gray-500 text-lg">Aucun produit trouvé pour cette catégorie.</p>
-          </div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#118AB2] mx-auto mb-4"></div>
+              <p className="text-gray-600">Chargement des produits...</p>
+            </div>
+          )}
+
+          {error && (
+            <div className="text-center py-12">
+              <p className="text-red-600 text-lg mb-4">Erreur lors du chargement des produits</p>
+              <p className="text-gray-600">{error}</p>
+            </div>
+          )}
+
+          {!loading && !error && (
+            <>
+              {/* Résultats */}
+              <div className="mb-6">
+                <p className="text-sm text-gray-600">
+                  {filteredProducts.length} produit{filteredProducts.length > 1 ? 's' : ''} trouvé{filteredProducts.length > 1 ? 's' : ''}
+                  {selectedCategory !== 'all' && (
+                    <span> dans la catégorie "{selectedCategory}"</span>
+                  )}
+                </p>
+              </div>
+              
+              {/* Grille responsive */}
+              <div className={`grid gap-6 ${
+                viewMode === 'grid' 
+                  ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
+                  : 'grid-cols-1'
+              }`}>
+                {filteredProducts.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+
+              {/* Message si aucun produit */}
+              {filteredProducts.length === 0 && (
+                <div className="text-center py-12">
+                  <p className="text-gray-500 text-lg">Aucun produit trouvé pour cette catégorie.</p>
+                </div>
+              )}
+            </>
           )}
         </div>
       </section>

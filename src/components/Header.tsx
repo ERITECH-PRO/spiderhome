@@ -57,18 +57,12 @@ const Header = () => {
           </div>
 
           {/* CTA Button */}
-          <div className="hidden lg:block flex space-x-4">
+          <div className="hidden lg:block">
             <Link
               to="/contact"
               className="bg-[#EF476F] text-white px-6 py-3 rounded-lg font-semibold hover:bg-opacity-90 transition-all duration-200 transform hover:scale-105 shadow-lg"
             >
               Demander une démo
-            </Link>
-            <Link
-              to="/produits/interface-signalisation-wifi"
-              className="bg-[#118AB2] text-white px-6 py-3 rounded-lg font-semibold hover:bg-opacity-90 transition-all duration-200 transform hover:scale-105 shadow-lg"
-            >
-              Test Produit
             </Link>
           </div>
 

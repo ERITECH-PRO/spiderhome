@@ -10,8 +10,6 @@ import ProductDetail from './pages/ProductDetail';
 import About from './pages/About';
 import Blog from './pages/Blog';
 import Contact from './pages/Contact';
-import TestNavigation from './pages/TestNavigation';
-import SimpleTest from './pages/SimpleTest';
 import Login from './pages/admin/Login';
 import Dashboard from './pages/admin/Dashboard';
 import AdminProducts from './pages/admin/Products';
@@ -41,8 +39,6 @@ const PublicLayout = () => {
           <Route path="/a-propos" element={<About />} />
           <Route path="/blog" element={<Blog />} />
           <Route path="/contact" element={<Contact />} />
-          <Route path="/test" element={<TestNavigation />} />
-          <Route path="/simple-test" element={<SimpleTest />} />
         </Routes>
       </main>
       <Footer />

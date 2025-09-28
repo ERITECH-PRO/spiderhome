@@ -10,7 +10,7 @@
     "build:all": "npm run build && npm run build:server",
     "lint": "eslint .",
     "preview": "vite preview",
-    "server": "node server-with-demo-data.js",
+    "server": "node server.js",
     "start": "npm run build:all && npm run server",
     "dev:full": "concurrently \"npm run dev\" \"npm run build:server && npm run server\""
   },

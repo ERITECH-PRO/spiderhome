@@ -104,6 +104,14 @@ app.get('/api/slides', async (req, res) => {
   }
 });
 
+app.get('/api/features', async (req, res) => {
+  try {
+    await getFeatures(req, res);
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur lors de la récupération des fonctionnalités' });
+  }
+});
+
 // Route de base
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
@@ -124,9 +132,9 @@ async function initializeDatabase() {
   
   const connected = await testConnection();
   if (!connected) {
-    console.warn('⚠️ Impossible de se connecter à la base de données MySQL distante');
-    console.log('🔄 Mode démonstration activé - les données seront stockées en mémoire');
-    return;
+    console.error('❌ Impossible de se connecter à la base de données MySQL distante');
+    console.error('❌ Le serveur ne peut pas démarrer sans connexion à la base de données');
+    process.exit(1);
   }
   
   const tablesCreated = await initializeTables();

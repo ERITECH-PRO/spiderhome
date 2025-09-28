@@ -3,14 +3,11 @@ const dbConfig = {
     host: '185.183.35.80',
     port: 3307,
     user: 'root',
-    password: 'StrongPassword123',
+    password: 'StrongPass123',
     database: 'sp_base',
     waitForConnections: true,
     connectionLimit: 10,
-    queueLimit: 0,
-    acquireTimeout: 60000,
-    timeout: 60000,
-    reconnect: true
+    queueLimit: 0
 };
 // Créer le pool de connexions
 export const pool = mysql.createPool(dbConfig);
