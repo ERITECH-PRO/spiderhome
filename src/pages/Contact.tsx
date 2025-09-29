@@ -66,19 +66,19 @@ const Contact = () => {
     {
       icon: Mail,
       title: 'Email',
-      content: 'contact@spiderhome.fr',
+      content: 'contact@spiderhome.org',
       description: 'Réponse sous 24h'
     },
     {
       icon: Phone,
       title: 'Téléphone',
-      content: '+33 1 23 45 67 89',
+      content: '+216 29 427 196',
       description: 'Lun-Ven 9h-18h'
     },
     {
       icon: MapPin,
       title: 'Adresse',
-      content: '123 Avenue des Champs-Élysées\n75008 Paris, France',
+      content: 'Sfax, Tunisie',
       description: 'Sur rendez-vous'
     },
     {
@@ -357,10 +357,15 @@ const Contact = () => {
                 <p className="text-gray-600 mb-4 text-sm">
                   Besoin d'une réponse rapide ? Contactez-nous sur WhatsApp !
                 </p>
-                <button className="bg-green-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-600 transition-colors duration-200 w-full">
+                <a
+                  href="https://wa.me/qr/2RNEFTYJSA3ZK1"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block text-center bg-green-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-600 transition-colors duration-200 w-full"
+                >
                   <MessageSquare className="w-5 h-5 inline mr-2" />
                   Écrire sur WhatsApp
-                </button>
+                </a>
               </div>
             </div>
           </div>
@@ -372,7 +377,7 @@ const Contact = () => {
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-[#0B0C10] mb-4">
-              Notre showroom parisien
+              Notre showroom à Sfax
             </h2>
             <p className="text-xl text-gray-600">
               Venez découvrir nos solutions en action dans notre espace de démonstration
@@ -383,7 +388,7 @@ const Contact = () => {
               <MapPin className="w-16 h-16 text-[#118AB2] mx-auto mb-4" />
               <p className="text-gray-600">
                 Carte Google Maps intégrée<br />
-                123 Avenue des Champs-Élysées, 75008 Paris
+                Sfax, Tunisie
               </p>
             </div>
           </div>

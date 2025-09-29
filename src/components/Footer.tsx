@@ -19,9 +19,9 @@ const Footer = () => {
       { name: 'Cookies', path: '/cookies' },
     ],
     contact: [
-      { icon: Mail, text: 'contact@spiderhome.fr' },
-      { icon: Phone, text: '+33 1 23 45 67 89' },
-      { icon: MapPin, text: 'Paris, France' },
+      { icon: Mail, text: 'contact@spiderhome.org' },
+      { icon: Phone, text: '+216 29 427 196' },
+      { icon: MapPin, text: 'Sfax, Tunisie' },
     ],
   };
 
