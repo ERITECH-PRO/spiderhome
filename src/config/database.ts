@@ -55,6 +55,7 @@ export const initializeTables = async () => {
         short_description TEXT,
         long_description TEXT,
         image_url VARCHAR(500),
+        images JSON,
         specifications JSON,
         benefits JSON,
         downloads JSON,

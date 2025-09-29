@@ -100,7 +100,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
 
       <div className="flex">
         {/* Desktop Sidebar */}
-        <aside className={`hidden lg:block transition-all duration-300 ${
+        <aside className={`hidden lg:block fixed left-0 top-0 h-screen z-40 transition-all duration-300 ${
           sidebarCollapsed ? 'w-16' : 'w-64'
         } ${
           isDark 
@@ -282,7 +282,9 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
         )}
 
         {/* Main Content */}
-        <main className="flex-1 min-h-screen">
+        <main className={`flex-1 min-h-screen transition-all duration-300 ${
+          sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'
+        }`}>
           {/* Desktop Header */}
           <header className={`hidden lg:block sticky top-0 z-30 transition-all duration-300 ${
             isDark 

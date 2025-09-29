@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import multer from 'multer';
+import fs from 'fs';
 import { testConnection, initializeTables, createDefaultAdmin } from './dist/config/database.js';
 import { authenticateUser, getClientIP } from './dist/utils/auth.js';
 import {
@@ -12,10 +14,12 @@ import {
   updateProduct,
   deleteProduct,
   getSlides,
+  getSlideById,
   createSlide,
   updateSlide,
   deleteSlide,
   getBlogs,
+  getBlogById,
   createBlog,
   updateBlog,
   deleteBlog,
@@ -29,6 +33,37 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Create uploads directory if it doesn't exist
+const uploadsDir = path.join(__dirname, 'public', 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadsDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!'), false);
+    }
+  }
+});
+
 const app = express();
 const PORT = process.env.PORT || 3002;
 
@@ -36,6 +71,7 @@ const PORT = process.env.PORT || 3002;
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'dist')));
+app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 
 // Routes API Admin
 app.post('/api/admin/login', async (req, res) => {
@@ -66,14 +102,61 @@ app.post('/api/admin/products', createProduct);
 app.put('/api/admin/products/:id', updateProduct);
 app.delete('/api/admin/products/:id', deleteProduct);
 
+// Upload route for single image
+app.post('/api/admin/upload', upload.single('image'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+    
+    const fileUrl = `/uploads/${req.file.filename}`;
+    res.json({ 
+      success: true, 
+      url: fileUrl,
+      filename: req.file.filename,
+      originalName: req.file.originalname,
+      size: req.file.size
+    });
+  } catch (error) {
+    console.error('Upload error:', error);
+    res.status(500).json({ error: 'Upload failed' });
+  }
+});
+
+// Upload route for multiple images
+app.post('/api/admin/upload-multiple', upload.array('images', 10), (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ error: 'No files uploaded' });
+    }
+    
+    const uploadedFiles = req.files.map(file => ({
+      url: `/uploads/${file.filename}`,
+      filename: file.filename,
+      originalName: file.originalname,
+      size: file.size
+    }));
+    
+    res.json({ 
+      success: true, 
+      files: uploadedFiles
+    });
+  } catch (error) {
+    console.error('Upload error:', error);
+    res.status(500).json({ error: 'Upload failed' });
+  }
+});
+
 // Routes Slides
 app.get('/api/admin/slides', getSlides);
+app.get('/api/admin/slides/:id', getSlideById);
 app.post('/api/admin/slides', createSlide);
 app.put('/api/admin/slides/:id', updateSlide);
 app.delete('/api/admin/slides/:id', deleteSlide);
 
 // Routes Blog
 app.get('/api/admin/blogs', getBlogs);
+app.get('/api/admin/blogs/:id', getBlogById);
 app.post('/api/admin/blogs', createBlog);
 app.put('/api/admin/blogs/:id', updateBlog);
 app.delete('/api/admin/blogs/:id', deleteBlog);
