@@ -40,7 +40,7 @@ const Products = () => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/admin/products');
+        const response = await fetch('/api/products');
         if (!response.ok) {
           throw new Error('Erreur lors du chargement des produits');
         }
@@ -103,11 +103,10 @@ const Products = () => {
         <div className="relative">
           {/* Image du produit */}
           <div className="aspect-square bg-gray-50 flex items-center justify-center p-4">
-            <img
+            <LazyImage
               src={product.image_url || '/placeholder-product.jpg'}
               alt={product.title}
               className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
-              loading="lazy"
             />
           </div>
           

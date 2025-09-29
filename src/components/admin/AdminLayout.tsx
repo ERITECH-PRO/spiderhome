@@ -14,7 +14,8 @@ import {
   User,
   Bell,
   Search,
-  Home
+  Home,
+  Shield
 } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -32,11 +33,11 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   };
 
   const menuItems = [
-    { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard', color: 'text-blue-400' },
-    { path: '/admin/dashboard/products', icon: Package, label: 'Produits', color: 'text-green-400' },
-    { path: '/admin/dashboard/slides', icon: Image, label: 'Slides', color: 'text-purple-400' },
-    { path: '/admin/dashboard/blog', icon: FileText, label: 'Blog', color: 'text-orange-400' },
-    { path: '/admin/dashboard/features', icon: Settings, label: 'Fonctionnalités', color: 'text-cyan-400' },
+    { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    { path: '/admin/dashboard/products', icon: Package, label: 'Produits' },
+    { path: '/admin/dashboard/slides', icon: Image, label: 'Slides' },
+    { path: '/admin/dashboard/blog', icon: FileText, label: 'Blog' },
+    { path: '/admin/dashboard/features', icon: Settings, label: 'Fonctionnalités' },
   ];
 
   const getCurrentUser = () => {
@@ -49,37 +50,45 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   return (
     <div className={`min-h-screen transition-all duration-300 ${
       isDark 
-        ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-black' 
-        : 'bg-gradient-to-br from-gray-50 via-white to-gray-100'
+        ? 'bg-[#0B0C10] text-white' 
+        : 'bg-white text-[#0B0C10]'
     }`}>
+      
       {/* Mobile Header */}
-      <header className={`lg:hidden backdrop-blur-sm border-b sticky top-0 z-50 transition-all duration-300 ${
+      <header className={`lg:hidden sticky top-0 z-50 transition-all duration-300 ${
         isDark 
-          ? 'bg-gray-900/95 border-gray-700' 
-          : 'bg-white/95 border-gray-200'
+          ? 'bg-[#1C1C1C] border-b border-[#2A2A2A]' 
+          : 'bg-white border-b border-[#E0E0E0]'
       }`}>
         <div className="px-4 py-3 flex items-center justify-between">
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className={`transition-colors ${
+            className={`p-2 rounded-lg transition-all duration-200 ${
               isDark 
-                ? 'text-white hover:text-blue-400' 
-                : 'text-gray-800 hover:text-blue-600'
+                ? 'text-[#B0B0B0] hover:text-white hover:bg-[#2A2A2A]' 
+                : 'text-[#555555] hover:text-[#0B0C10] hover:bg-[#F0F0F0]'
             }`}
           >
-            {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
-          <h1 className={`text-lg font-bold transition-colors ${
-            isDark ? 'text-white' : 'text-gray-800'
-          }`}>SpiderHome Admin</h1>
+          
+          <div className="flex items-center space-x-2">
+            <Shield className={`h-6 w-6 ${isDark ? 'text-[#118AB2]' : 'text-[#118AB2]'}`} />
+            <h1 className={`text-lg font-bold ${
+              isDark ? 'text-white' : 'text-[#0B0C10]'
+            }`}>
+              SpiderHome Admin
+            </h1>
+          </div>
+          
           <div className="flex items-center space-x-2">
             <ThemeToggle />
             <Link 
               to="/" 
-              className={`transition-colors ${
+              className={`p-2 rounded-lg transition-all duration-200 ${
                 isDark 
-                  ? 'text-white hover:text-blue-400' 
-                  : 'text-gray-800 hover:text-blue-600'
+                  ? 'text-[#B0B0B0] hover:text-white hover:bg-[#2A2A2A]' 
+                  : 'text-[#555555] hover:text-[#0B0C10] hover:bg-[#F0F0F0]'
               }`}
               title="Voir le site"
             >
@@ -91,39 +100,44 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
 
       <div className="flex">
         {/* Desktop Sidebar */}
-        <aside className={`hidden lg:block backdrop-blur-sm border-r transition-all duration-300 ${
+        <aside className={`hidden lg:block transition-all duration-300 ${
           sidebarCollapsed ? 'w-16' : 'w-64'
         } ${
           isDark 
-            ? 'bg-gray-900/95 border-gray-700' 
-            : 'bg-white/95 border-gray-200'
+            ? 'bg-[#1C1C1C] border-r border-[#2A2A2A]' 
+            : 'bg-[#F7F7F7] border-r border-[#E0E0E0]'
         }`}>
+          
           {/* Sidebar Header */}
-          <div className={`p-4 border-b transition-colors ${
-            isDark ? 'border-gray-700' : 'border-gray-200'
+          <div className={`p-4 border-b ${
+            isDark ? 'border-[#2A2A2A]' : 'border-[#E0E0E0]'
           }`}>
             <div className="flex items-center justify-between">
               {!sidebarCollapsed && (
                 <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                    <span className="text-white font-bold text-sm">SH</span>
+                  <div className="w-8 h-8 bg-[#118AB2] rounded-lg flex items-center justify-center">
+                    <Shield className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <h2 className={`font-bold text-lg transition-colors ${
-                      isDark ? 'text-white' : 'text-gray-800'
-                    }`}>SpiderHome</h2>
-                    <p className={`text-xs transition-colors ${
-                      isDark ? 'text-gray-400' : 'text-gray-500'
-                    }`}>Administration</p>
+                    <h2 className={`font-bold text-lg ${
+                      isDark ? 'text-white' : 'text-[#0B0C10]'
+                    }`}>
+                      SpiderHome
+                    </h2>
+                    <p className={`text-xs ${
+                      isDark ? 'text-[#B0B0B0]' : 'text-[#555555]'
+                    }`}>
+                      Administration
+                    </p>
                   </div>
                 </div>
               )}
               <button
                 onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className={`transition-colors p-1 rounded-lg hover:bg-opacity-20 ${
+                className={`p-2 rounded-lg transition-all duration-200 ${
                   isDark 
-                    ? 'text-gray-400 hover:text-white hover:bg-gray-800' 
-                    : 'text-gray-500 hover:text-gray-800 hover:bg-gray-200'
+                    ? 'text-[#B0B0B0] hover:text-white hover:bg-[#2A2A2A]' 
+                    : 'text-[#555555] hover:text-[#0B0C10] hover:bg-[#F0F0F0]'
                 }`}
               >
                 {sidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
@@ -133,7 +147,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
 
           {/* Navigation */}
           <nav className="p-4">
-            <ul className="space-y-2">
+            <ul className="space-y-1">
               {menuItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.path;
@@ -142,27 +156,17 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                   <li key={item.path}>
                     <Link
                       to={item.path}
-                      className={`group flex items-center space-x-3 px-3 py-3 rounded-xl transition-all duration-200 ${
+                      className={`group flex items-center space-x-3 px-3 py-3 rounded-lg transition-all duration-200 ${
                         isActive
                           ? isDark
-                            ? 'bg-gradient-to-r from-blue-600/20 to-purple-600/20 text-white border border-blue-500/30'
-                            : 'bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 border border-blue-300'
+                            ? 'bg-[#118AB2] text-white'
+                            : 'bg-[#118AB2] text-white'
                           : isDark
-                            ? 'text-gray-400 hover:text-white hover:bg-gray-800/50'
-                            : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100/50'
+                            ? 'text-[#B0B0B0] hover:text-white hover:bg-[#2A2A2A]'
+                            : 'text-[#555555] hover:text-[#0B0C10] hover:bg-[#F0F0F0]'
                       }`}
                     >
-                      <div className={`p-2 rounded-lg transition-all duration-200 ${
-                        isActive 
-                          ? isDark
-                            ? 'bg-blue-500/20'
-                            : 'bg-blue-500/10'
-                          : isDark
-                            ? 'group-hover:bg-gray-700/50'
-                            : 'group-hover:bg-gray-200/50'
-                      }`}>
-                        <Icon className={`h-5 w-5 ${isActive ? 'text-blue-400' : item.color}`} />
-                      </div>
+                      <Icon className="h-5 w-5 flex-shrink-0" />
                       {!sidebarCollapsed && (
                         <span className="font-medium text-sm">{item.label}</span>
                       )}
@@ -174,32 +178,36 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
           </nav>
 
           {/* User Section */}
-          <div className={`absolute bottom-0 left-0 right-0 p-4 border-t transition-colors ${
-            isDark ? 'border-gray-700' : 'border-gray-200'
+          <div className={`absolute bottom-0 left-0 right-0 p-4 border-t ${
+            isDark ? 'border-[#2A2A2A]' : 'border-[#E0E0E0]'
           }`}>
             {!sidebarCollapsed && user && (
               <div className="flex items-center space-x-3 mb-4">
-                <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center">
+                <div className="w-8 h-8 bg-[#EF476F] rounded-full flex items-center justify-center">
                   <User className="h-4 w-4 text-white" />
                 </div>
                 <div>
-                  <p className={`text-sm font-medium transition-colors ${
-                    isDark ? 'text-white' : 'text-gray-800'
-                  }`}>{user.username}</p>
-                  <p className={`text-xs capitalize transition-colors ${
-                    isDark ? 'text-gray-400' : 'text-gray-500'
-                  }`}>{user.role}</p>
+                  <p className={`text-sm font-medium ${
+                    isDark ? 'text-white' : 'text-[#0B0C10]'
+                  }`}>
+                    {user.username}
+                  </p>
+                  <p className={`text-xs capitalize ${
+                    isDark ? 'text-[#B0B0B0]' : 'text-[#555555]'
+                  }`}>
+                    {user.role}
+                  </p>
                 </div>
               </div>
             )}
             <button
               onClick={handleLogout}
-              className={`w-full flex items-center space-x-3 px-3 py-3 rounded-xl transition-all duration-200 ${
+              className={`w-full flex items-center space-x-3 px-3 py-3 rounded-lg transition-all duration-200 ${
                 sidebarCollapsed ? 'justify-center' : ''
               } ${
                 isDark
-                  ? 'text-red-400 hover:text-red-300 hover:bg-red-500/10'
-                  : 'text-red-600 hover:text-red-700 hover:bg-red-50'
+                  ? 'text-[#EF476F] hover:text-white hover:bg-[#EF476F]/10'
+                  : 'text-[#EF476F] hover:text-white hover:bg-[#EF476F]/10'
               }`}
             >
               <LogOut className="h-5 w-5" />
@@ -212,20 +220,20 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
         {mobileMenuOpen && (
           <div className="lg:hidden fixed inset-0 z-40">
             <div className="fixed inset-0 bg-black/50" onClick={() => setMobileMenuOpen(false)} />
-            <aside className="fixed left-0 top-0 h-full w-64 bg-gray-900/95 backdrop-blur-sm border-r border-gray-700">
-              <div className="p-4 border-b border-gray-700">
+            <aside className="fixed left-0 top-0 h-full w-64 bg-[#1C1C1C] border-r border-[#2A2A2A]">
+              <div className="p-4 border-b border-[#2A2A2A]">
                 <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                    <span className="text-white font-bold text-sm">SH</span>
+                  <div className="w-8 h-8 bg-[#118AB2] rounded-lg flex items-center justify-center">
+                    <Shield className="h-5 w-5 text-white" />
                   </div>
                   <div>
                     <h2 className="text-white font-bold text-lg">SpiderHome</h2>
-                    <p className="text-gray-400 text-xs">Administration</p>
+                    <p className="text-[#B0B0B0] text-xs">Administration</p>
                   </div>
                 </div>
               </div>
               <nav className="p-4">
-                <ul className="space-y-2">
+                <ul className="space-y-1">
                   {menuItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = location.pathname === item.path;
@@ -235,19 +243,13 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                         <Link
                           to={item.path}
                           onClick={() => setMobileMenuOpen(false)}
-                          className={`flex items-center space-x-3 px-3 py-3 rounded-xl transition-all duration-200 ${
+                          className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-all duration-200 ${
                             isActive
-                              ? 'bg-gradient-to-r from-blue-600/20 to-purple-600/20 text-white border border-blue-500/30'
-                              : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+                              ? 'bg-[#118AB2] text-white'
+                              : 'text-[#B0B0B0] hover:text-white hover:bg-[#2A2A2A]'
                           }`}
                         >
-                          <div className={`p-2 rounded-lg transition-all duration-200 ${
-                            isActive 
-                              ? 'bg-blue-500/20' 
-                              : 'hover:bg-gray-700/50'
-                          }`}>
-                            <Icon className={`h-5 w-5 ${isActive ? 'text-blue-400' : item.color}`} />
-                          </div>
+                          <Icon className="h-5 w-5" />
                           <span className="font-medium text-sm">{item.label}</span>
                         </Link>
                       </li>
@@ -256,19 +258,19 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                 </ul>
               </nav>
               {user && (
-                <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-700">
+                <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-[#2A2A2A]">
                   <div className="flex items-center space-x-3 mb-4">
-                    <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center">
+                    <div className="w-8 h-8 bg-[#EF476F] rounded-full flex items-center justify-center">
                       <User className="h-4 w-4 text-white" />
                     </div>
                     <div>
                       <p className="text-white text-sm font-medium">{user.username}</p>
-                      <p className="text-gray-400 text-xs capitalize">{user.role}</p>
+                      <p className="text-[#B0B0B0] text-xs capitalize">{user.role}</p>
                     </div>
                   </div>
                   <button
                     onClick={handleLogout}
-                    className="w-full flex items-center space-x-3 px-3 py-3 rounded-xl text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all duration-200"
+                    className="w-full flex items-center space-x-3 px-3 py-3 rounded-lg text-[#EF476F] hover:text-white hover:bg-[#EF476F]/10 transition-all duration-200"
                   >
                     <LogOut className="h-5 w-5" />
                     <span className="font-medium text-sm">Déconnexion</span>
@@ -282,25 +284,25 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
         {/* Main Content */}
         <main className="flex-1 min-h-screen">
           {/* Desktop Header */}
-          <header className={`hidden lg:block backdrop-blur-sm border-b sticky top-0 z-30 transition-all duration-300 ${
+          <header className={`hidden lg:block sticky top-0 z-30 transition-all duration-300 ${
             isDark 
-              ? 'bg-gray-900/50 border-gray-700' 
-              : 'bg-white/50 border-gray-200'
+              ? 'bg-[#1C1C1C]/95 border-b border-[#2A2A2A]' 
+              : 'bg-white/95 border-b border-[#E0E0E0]'
           }`}>
             <div className="px-6 py-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                   <div className="relative">
-                    <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 transition-colors ${
-                      isDark ? 'text-gray-400' : 'text-gray-500'
+                    <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 ${
+                      isDark ? 'text-[#B0B0B0]' : 'text-[#555555]'
                     }`} />
                     <input
                       type="text"
                       placeholder="Rechercher..."
-                      className={`pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-300 ${
+                      className={`pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#118AB2]/20 focus:border-[#118AB2] transition-all duration-200 ${
                         isDark
-                          ? 'bg-gray-800/50 border-gray-600 text-white placeholder-gray-400'
-                          : 'bg-gray-100/50 border-gray-300 text-gray-800 placeholder-gray-500'
+                          ? 'bg-[#2A2A2A] border-[#2A2A2A] text-white placeholder-[#B0B0B0]'
+                          : 'bg-[#F7F7F7] border-[#E0E0E0] text-[#0B0C10] placeholder-[#555555]'
                       }`}
                     />
                   </div>
@@ -308,36 +310,40 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                 <div className="flex items-center space-x-4">
                   <Link
                     to="/"
-                    className={`flex items-center space-x-2 px-3 py-2 transition-colors rounded-lg ${
+                    className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 ${
                       isDark
-                        ? 'text-gray-400 hover:text-white hover:bg-gray-800/50'
-                        : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100/50'
+                        ? 'text-[#B0B0B0] hover:text-white hover:bg-[#2A2A2A]'
+                        : 'text-[#555555] hover:text-[#0B0C10] hover:bg-[#F0F0F0]'
                     }`}
                   >
                     <Home className="h-4 w-4" />
                     <span className="text-sm">Voir le site</span>
                   </Link>
-                  <button className={`relative p-2 transition-colors ${
+                  <button className={`relative p-2 rounded-lg transition-all duration-200 ${
                     isDark
-                      ? 'text-gray-400 hover:text-white'
-                      : 'text-gray-600 hover:text-gray-800'
+                      ? 'text-[#B0B0B0] hover:text-white hover:bg-[#2A2A2A]'
+                      : 'text-[#555555] hover:text-[#0B0C10] hover:bg-[#F0F0F0]'
                   }`}>
                     <Bell className="h-5 w-5" />
-                    <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full"></span>
+                    <span className="absolute -top-1 -right-1 h-3 w-3 bg-[#EF476F] rounded-full"></span>
                   </button>
                   <ThemeToggle />
                   {user && (
                     <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center">
+                      <div className="w-8 h-8 bg-[#EF476F] rounded-full flex items-center justify-center">
                         <User className="h-4 w-4 text-white" />
                       </div>
                       <div className="text-right">
-                        <p className={`text-sm font-medium transition-colors ${
-                          isDark ? 'text-white' : 'text-gray-800'
-                        }`}>{user.username}</p>
-                        <p className={`text-xs capitalize transition-colors ${
-                          isDark ? 'text-gray-400' : 'text-gray-500'
-                        }`}>{user.role}</p>
+                        <p className={`text-sm font-medium ${
+                          isDark ? 'text-white' : 'text-[#0B0C10]'
+                        }`}>
+                          {user.username}
+                        </p>
+                        <p className={`text-xs capitalize ${
+                          isDark ? 'text-[#B0B0B0]' : 'text-[#555555]'
+                        }`}>
+                          {user.role}
+                        </p>
                       </div>
                     </div>
                   )}
@@ -347,8 +353,8 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
           </header>
 
           {/* Content Area */}
-          <div className={`p-6 transition-colors ${
-            isDark ? 'bg-transparent' : 'bg-gray-50/50'
+          <div className={`p-6 transition-all duration-300 ${
+            isDark ? 'bg-transparent' : 'bg-[#F7F7F7]/50'
           }`}>
             {children}
           </div>

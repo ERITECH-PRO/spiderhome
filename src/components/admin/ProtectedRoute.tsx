@@ -10,17 +10,30 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const location = useLocation();
 
   useEffect(() => {
+    console.log('🔍 ProtectedRoute: Vérification de l\'authentification...');
+    
     const token = localStorage.getItem('admin_token');
     const user = localStorage.getItem('admin_user');
     
+    console.log('🔑 Token trouvé:', !!token);
+    console.log('👤 Utilisateur trouvé:', !!user);
+    
     if (!token || !user) {
+      console.log('❌ Pas de token ou utilisateur, redirection vers login');
       setIsAuthenticated(false);
       return;
     }
 
+
     try {
-      // Vérification simple côté client - décoder le token base64
-      const payload = JSON.parse(atob(token));
+      // Vérification simple côté client - décoder le token JWT
+      const parts = token.split('.');
+      if (parts.length !== 3) {
+        throw new Error('Token JWT invalide - format incorrect');
+      }
+      
+      // Décoder la partie payload (partie 2)
+      const payload = JSON.parse(atob(parts[1]));
       const now = Math.floor(Date.now() / 1000);
       
       if (payload.exp && payload.exp < now) {
@@ -54,7 +67,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 
   if (!isAuthenticated) {
     // Redirect to login with return url
-    return <Navigate to="/admin" state={{ from: location }} replace />;
+    return <Navigate to="/admin/login" state={{ from: location }} replace />;
   }
 
   return <>{children}</>;

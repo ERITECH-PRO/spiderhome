@@ -56,36 +56,40 @@ const Login = () => {
   return (
     <div className={`min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 transition-all duration-300 ${
       isDark 
-        ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-black' 
-        : 'bg-gradient-to-br from-gray-50 via-white to-gray-100'
+        ? 'bg-[#0B0C10]' 
+        : 'bg-white'
     }`}>
       <div className="max-w-md w-full space-y-8">
         {/* Header */}
         <div className="text-center">
-          <div className="mx-auto h-20 w-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mb-6 shadow-2xl">
+          <div className="mx-auto h-20 w-20 bg-[#118AB2] rounded-2xl flex items-center justify-center mb-6 shadow-lg">
             <Lock className="h-10 w-10 text-white" />
           </div>
           <h2 className={`text-3xl font-bold transition-colors ${
-            isDark ? 'text-white' : 'text-gray-800'
+            isDark ? 'text-white' : 'text-[#0B0C10]'
           }`}>
             SpiderHome Admin
           </h2>
           <p className={`mt-2 text-sm transition-colors ${
-            isDark ? 'text-gray-400' : 'text-gray-500'
+            isDark ? 'text-[#B0B0B0]' : 'text-[#555555]'
           }`}>
-            Interface d'administration futuriste
+            Interface d'administration
           </p>
         </div>
 
         {/* Formulaire */}
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className={`backdrop-blur-sm border rounded-2xl shadow-2xl p-8 transition-all duration-300 ${
+          <div className={`border rounded-2xl shadow-lg p-8 transition-all duration-300 ${
             isDark 
-              ? 'bg-gray-800/50 border-gray-700' 
-              : 'bg-white/80 border-gray-200'
+              ? 'bg-[#1C1C1C] border-[#2A2A2A]' 
+              : 'bg-white border-[#E0E0E0]'
           }`}>
             {error && (
-              <div className="mb-4 bg-red-500/20 border border-red-500/30 text-red-400 px-4 py-3 rounded-xl">
+              <div className={`mb-4 px-4 py-3 rounded-xl border ${
+                isDark 
+                  ? 'bg-[#EF476F]/10 border-[#EF476F]/20 text-[#EF476F]' 
+                  : 'bg-red-50 border-red-200 text-red-600'
+              }`}>
                 {error}
               </div>
             )}
@@ -94,14 +98,14 @@ const Login = () => {
               {/* Nom d'utilisateur */}
               <div>
                 <label htmlFor="username" className={`block text-sm font-medium mb-2 transition-colors ${
-                  isDark ? 'text-gray-300' : 'text-gray-700'
+                  isDark ? 'text-[#B0B0B0]' : 'text-[#555555]'
                 }`}>
                   Nom d'utilisateur
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <User className={`h-5 w-5 transition-colors ${
-                      isDark ? 'text-gray-400' : 'text-gray-500'
+                      isDark ? 'text-[#B0B0B0]' : 'text-[#555555]'
                     }`} />
                   </div>
                   <input
@@ -111,10 +115,10 @@ const Login = () => {
                     required
                     value={formData.username}
                     onChange={handleChange}
-                    className={`block w-full pl-10 pr-3 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-300 ${
+                    className={`block w-full pl-10 pr-3 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#118AB2]/20 focus:border-[#118AB2] transition-all duration-300 ${
                       isDark
-                        ? 'bg-gray-700/50 border-gray-600 text-white placeholder-gray-400'
-                        : 'bg-gray-100/50 border-gray-300 text-gray-800 placeholder-gray-500'
+                        ? 'bg-[#2A2A2A] border-[#2A2A2A] text-white placeholder-[#B0B0B0]'
+                        : 'bg-[#F7F7F7] border-[#E0E0E0] text-[#0B0C10] placeholder-[#555555]'
                     }`}
                     placeholder="admin_spiderhome"
                   />
@@ -124,14 +128,14 @@ const Login = () => {
               {/* Mot de passe */}
               <div>
                 <label htmlFor="password" className={`block text-sm font-medium mb-2 transition-colors ${
-                  isDark ? 'text-gray-300' : 'text-gray-700'
+                  isDark ? 'text-[#B0B0B0]' : 'text-[#555555]'
                 }`}>
                   Mot de passe
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Lock className={`h-5 w-5 transition-colors ${
-                      isDark ? 'text-gray-400' : 'text-gray-500'
+                      isDark ? 'text-[#B0B0B0]' : 'text-[#555555]'
                     }`} />
                   </div>
                   <input
@@ -141,10 +145,10 @@ const Login = () => {
                     required
                     value={formData.password}
                     onChange={handleChange}
-                    className={`block w-full pl-10 pr-12 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-300 ${
+                    className={`block w-full pl-10 pr-12 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#118AB2]/20 focus:border-[#118AB2] transition-all duration-300 ${
                       isDark
-                        ? 'bg-gray-700/50 border-gray-600 text-white placeholder-gray-400'
-                        : 'bg-gray-100/50 border-gray-300 text-gray-800 placeholder-gray-500'
+                        ? 'bg-[#2A2A2A] border-[#2A2A2A] text-white placeholder-[#B0B0B0]'
+                        : 'bg-[#F7F7F7] border-[#E0E0E0] text-[#0B0C10] placeholder-[#555555]'
                     }`}
                     placeholder="••••••••"
                   />
@@ -155,11 +159,11 @@ const Login = () => {
                   >
                     {showPassword ? (
                       <EyeOff className={`h-5 w-5 transition-colors ${
-                        isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-700'
+                        isDark ? 'text-[#B0B0B0] hover:text-white' : 'text-[#555555] hover:text-[#0B0C10]'
                       }`} />
                     ) : (
                       <Eye className={`h-5 w-5 transition-colors ${
-                        isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-700'
+                        isDark ? 'text-[#B0B0B0] hover:text-white' : 'text-[#555555] hover:text-[#0B0C10]'
                       }`} />
                     )}
                   </button>
@@ -172,7 +176,7 @@ const Login = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-xl text-white bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-xl text-white bg-[#EF476F] hover:bg-[#d63d5f] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#EF476F] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
               >
                 {loading ? (
                   <div className="flex items-center">
@@ -183,19 +187,20 @@ const Login = () => {
                   'Se connecter'
                 )}
               </button>
+              
             </div>
 
             {/* Informations de connexion */}
             <div className={`mt-6 p-4 rounded-xl border transition-all duration-300 ${
               isDark 
-                ? 'bg-gray-700/50 border-gray-600' 
-                : 'bg-gray-100/50 border-gray-300'
+                ? 'bg-[#2A2A2A] border-[#2A2A2A]' 
+                : 'bg-[#F7F7F7] border-[#E0E0E0]'
             }`}>
               <h4 className={`text-sm font-medium mb-2 transition-colors ${
-                isDark ? 'text-gray-300' : 'text-gray-700'
+                isDark ? 'text-[#B0B0B0]' : 'text-[#555555]'
               }`}>Identifiants de test :</h4>
               <div className={`text-xs space-y-1 transition-colors ${
-                isDark ? 'text-gray-400' : 'text-gray-500'
+                isDark ? 'text-[#B0B0B0]' : 'text-[#555555]'
               }`}>
                 <p><strong>Utilisateur :</strong> admin_spiderhome</p>
                 <p><strong>Mot de passe :</strong> Industrial2024</p>
@@ -212,9 +217,9 @@ const Login = () => {
         {/* Footer */}
         <div className="text-center">
           <p className={`text-sm transition-colors ${
-            isDark ? 'text-gray-400' : 'text-gray-500'
+            isDark ? 'text-[#B0B0B0]' : 'text-[#555555]'
           }`}>
-            © 2024 SpiderHome. Interface d'administration futuriste.
+            © 2024 SpiderHome. Interface d'administration.
           </p>
         </div>
       </div>

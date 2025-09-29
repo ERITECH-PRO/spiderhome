@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Outlet, Navigate } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { ThemeProvider } from './contexts/ThemeContext';
 import Header from './components/Header';
@@ -31,15 +31,7 @@ const PublicLayout = () => {
       <ScrollToTop />
       <Header />
       <main>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/fonctionnalites" element={<Features />} />
-          <Route path="/produits" element={<Products />} />
-          <Route path="/produits/:slug" element={<ProductDetail />} />
-          <Route path="/a-propos" element={<About />} />
-          <Route path="/blog" element={<Blog />} />
-          <Route path="/contact" element={<Contact />} />
-        </Routes>
+        <Outlet />
       </main>
       <Footer />
     </div>
@@ -50,31 +42,7 @@ const PublicLayout = () => {
 const AdminApp = () => {
   return (
     <ThemeProvider>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/*" element={
-          <ProtectedRoute>
-            <AdminLayout>
-              <Routes>
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/dashboard/products" element={<AdminProducts />} />
-                <Route path="/dashboard/products/new" element={<ProductForm />} />
-                <Route path="/dashboard/products/:id/edit" element={<ProductForm />} />
-                <Route path="/dashboard/slides" element={<Slides />} />
-                <Route path="/dashboard/slides/new" element={<SlideForm />} />
-                <Route path="/dashboard/slides/:id/edit" element={<SlideForm />} />
-                <Route path="/dashboard/blog" element={<BlogAdmin />} />
-                <Route path="/dashboard/blog/new" element={<BlogForm />} />
-                <Route path="/dashboard/blog/:id/edit" element={<BlogForm />} />
-                <Route path="/dashboard/features" element={<AdminFeatures />} />
-                <Route path="/dashboard/features/new" element={<FeatureForm />} />
-                <Route path="/dashboard/features/:id/edit" element={<FeatureForm />} />
-                <Route path="/" element={<Dashboard />} />
-              </Routes>
-            </AdminLayout>
-          </ProtectedRoute>
-        } />
-      </Routes>
+      <Outlet />
     </ThemeProvider>
   );
 };
@@ -85,10 +53,112 @@ function App() {
       <Router>
         <Routes>
           {/* Routes publiques avec Header et Footer */}
-          <Route path="/*" element={<PublicLayout />} />
+          <Route path="/" element={<PublicLayout />}>
+            <Route index element={<Home />} />
+            <Route path="fonctionnalites" element={<Features />} />
+            <Route path="produits" element={<Products />} />
+            <Route path="produits/:slug" element={<ProductDetail />} />
+            <Route path="a-propos" element={<About />} />
+            <Route path="blog" element={<Blog />} />
+            <Route path="contact" element={<Contact />} />
+          </Route>
           
           {/* Routes admin sans Header ni Footer */}
-          <Route path="/admin/*" element={<AdminApp />} />
+          <Route path="/admin" element={<AdminApp />}>
+            <Route index element={<Navigate to="/admin/login" replace />} />
+            <Route path="login" element={<Login />} />
+            <Route path="dashboard" element={
+              <ProtectedRoute>
+                <AdminLayout>
+                  <Dashboard />
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="dashboard/products" element={
+              <ProtectedRoute>
+                <AdminLayout>
+                  <AdminProducts />
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="dashboard/products/new" element={
+              <ProtectedRoute>
+                <AdminLayout>
+                  <ProductForm />
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="dashboard/products/:id/edit" element={
+              <ProtectedRoute>
+                <AdminLayout>
+                  <ProductForm />
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="dashboard/slides" element={
+              <ProtectedRoute>
+                <AdminLayout>
+                  <Slides />
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="dashboard/slides/new" element={
+              <ProtectedRoute>
+                <AdminLayout>
+                  <SlideForm />
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="dashboard/slides/:id/edit" element={
+              <ProtectedRoute>
+                <AdminLayout>
+                  <SlideForm />
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="dashboard/blog" element={
+              <ProtectedRoute>
+                <AdminLayout>
+                  <BlogAdmin />
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="dashboard/blog/new" element={
+              <ProtectedRoute>
+                <AdminLayout>
+                  <BlogForm />
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="dashboard/blog/:id/edit" element={
+              <ProtectedRoute>
+                <AdminLayout>
+                  <BlogForm />
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="dashboard/features" element={
+              <ProtectedRoute>
+                <AdminLayout>
+                  <AdminFeatures />
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="dashboard/features/new" element={
+              <ProtectedRoute>
+                <AdminLayout>
+                  <FeatureForm />
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="*" element={
+              <ProtectedRoute>
+                <AdminLayout>
+                  <Dashboard />
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+          </Route>
         </Routes>
       </Router>
     </HelmetProvider>
