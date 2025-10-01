@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Filter, SortAsc, Grid, List, X, Search, Sparkles, Package, Tag, Star, Eye } from 'lucide-react';
+import { ArrowRight, Filter, SortAsc, Grid, X, Search, Sparkles, Package, Tag } from 'lucide-react';
 import SEO from '../components/SEO';
 import LazyImage from '../components/LazyImage';
 import { getImageUrl } from '../config/config';
@@ -44,7 +44,7 @@ const Products = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [sortBy, setSortBy] = useState<'name' | 'reference' | 'new'>('name');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [viewMode] = useState<'grid'>('grid');
   const [showFilters, setShowFilters] = useState(false);
 
   // Récupérer les produits depuis l'API
@@ -109,6 +109,21 @@ const Products = () => {
     return filtered;
   }, [products, searchTerm, selectedCategory, sortBy]);
 
+  // Grouper les produits par catégorie
+  const productsByCategory = useMemo(() => {
+    const grouped: { [key: string]: Product[] } = {};
+    
+    filteredProducts.forEach(product => {
+      const category = product.category || 'Autres';
+      if (!grouped[category]) {
+        grouped[category] = [];
+      }
+      grouped[category].push(product);
+    });
+    
+    return grouped;
+  }, [filteredProducts]);
+
   const getProductImage = (product: Product) => {
     if (product.images && product.images.length > 0) {
       const mainImage = product.images.find(img => img.isMain) || product.images[0];
@@ -122,80 +137,58 @@ const Products = () => {
 
   const ProductCard = ({ product }: { product: Product }) => {
     return (
-      <div className="group relative bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer transform hover:scale-105 h-full flex flex-col">
+      <div className="group relative bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer h-full flex flex-col">
         <Link to={`/produits/${product.slug}`} className="block flex flex-col h-full">
           {/* Image Container */}
-          <div className="relative h-64 overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200">
+          <div className="relative h-80 bg-white flex items-center justify-center p-6">
+            <div className="relative flex items-center justify-center">
               <LazyImage
                 src={getProductImage(product)}
                 alt={product.title}
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                className="object-contain"
+                style={{ 
+                  maxWidth: '240px',
+                  maxHeight: '240px',
+                  width: 'auto',
+                  height: 'auto'
+                }}
               />
-            </div>
-            
-            {/* Gradient Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            
-            {/* Badges */}
-            <div className="absolute top-4 left-4 flex flex-col gap-2">
+              
+              {/* Badge NOUVEAU */}
               {Boolean(product.is_new) && (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-500 text-white shadow-lg">
-                  <Star className="w-3 h-3 mr-1" />
-                  NOUVEAU
-                </span>
+                <div className="absolute -top-2 -right-2">
+                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-bold bg-red-500 text-white shadow-md">
+                    NOWOŚĆ
+                  </span>
+                </div>
               )}
-              {Boolean(product.featured) && (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium text-white shadow-lg" style={{ backgroundColor: '#118AB2' }}>
-                  <Sparkles className="w-3 h-3 mr-1" />
-                  FEATURED
-                </span>
-              )}
-            </div>
-            
-            {/* Category Badge */}
-            {product.category && (
-              <div className="absolute top-4 right-4">
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium backdrop-blur-sm border bg-white/90 text-gray-700 border-white/20">
-                  {product.category}
-                </span>
-              </div>
-            )}
-            
-            {/* Hover Action */}
-            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              <div className="p-3 rounded-full backdrop-blur-sm bg-white/90 text-gray-700">
-                <Eye className="w-6 h-6" />
-              </div>
             </div>
           </div>
           
           {/* Content */}
           <div className="p-6 flex flex-col h-full">
             <div className="flex-1">
-              <h3 className="text-lg font-bold mb-2 line-clamp-2 transition-colors text-gray-900 group-hover:text-blue-600">
+              <h3 className="text-base font-semibold mb-2 text-gray-900 text-center uppercase tracking-wide">
                 {product.title}
               </h3>
               
-              <p className="text-sm mb-4 line-clamp-2 text-gray-600">
+              <p className="text-sm mb-4 text-gray-700 text-center leading-relaxed">
                 {product.short_description}
               </p>
             </div>
             
-            {/* Bottom Section - Fixed at bottom */}
-            <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-auto">
-              {/* Reference */}
-              <div className="flex items-center space-x-1 text-xs text-gray-500">
-                <Package className="h-3 w-3" />
-                <span>{product.reference}</span>
+            {/* Bottom Section */}
+            <div className="text-center">
+              {/* Model */}
+              <div className="mb-4">
+                <span className="text-sm font-medium text-gray-600">
+                  {product.reference}
+                </span>
               </div>
               
               {/* Action Button */}
-              <div className="flex items-center space-x-1">
-                <span className="text-sm font-medium transition-colors text-gray-600 group-hover:text-blue-600">
-                  Voir les détails
-                </span>
-                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1 text-gray-400" />
+              <div className="inline-flex items-center text-sm font-medium transition-colors" style={{ color: '#118AB2' }}>
+                <span className="hover:opacity-80">Pour en savoir plus</span>
               </div>
             </div>
           </div>
@@ -302,31 +295,6 @@ const Products = () => {
                 </select>
               </div>
 
-              {/* View Mode */}
-              <div className="flex items-center gap-1 border border-gray-200 rounded-xl p-1 bg-gray-50">
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`p-2 rounded-lg transition-all duration-200 ${
-                    viewMode === 'grid' 
-                      ? 'text-white shadow-lg' 
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                  }`}
-                  style={{ backgroundColor: viewMode === 'grid' ? '#118AB2' : 'transparent' }}
-                >
-                  <Grid className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`p-2 rounded-lg transition-all duration-200 ${
-                    viewMode === 'list' 
-                      ? 'text-white shadow-lg' 
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                  }`}
-                  style={{ backgroundColor: viewMode === 'list' ? '#118AB2' : 'transparent' }}
-                >
-                  <List className="w-4 h-4" />
-                </button>
-              </div>
 
               {/* Mobile Filter Toggle */}
               <button
@@ -370,7 +338,7 @@ const Products = () => {
       </section>
 
       {/* Products Grid */}
-      <section className="py-12 bg-gray-50">
+      <section className="py-8 bg-gray-100">
         <div className="container mx-auto px-4">
           {/* Loading and Error States */}
           {loading && (
@@ -397,47 +365,32 @@ const Products = () => {
 
           {!loading && !error && (
             <>
-              {/* Results Header - Only show when there are products */}
-              {filteredProducts.length > 0 && (
-                <div className="mb-8 p-6 rounded-2xl border bg-white border-gray-200 shadow-lg">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h2 className="text-xl font-bold flex items-center text-gray-900">
-                        <Sparkles className="h-5 w-5 mr-2 text-yellow-500" />
-                        {filteredProducts.length} produit{filteredProducts.length > 1 ? 's' : ''} trouvé{filteredProducts.length > 1 ? 's' : ''}
+              {Object.keys(productsByCategory).length > 0 ? (
+                // Affichage par catégories
+                Object.entries(productsByCategory).map(([categoryName, categoryProducts]) => (
+                  <div key={categoryName} className="mb-12">
+                    {/* Titre de la catégorie */}
+                    <div className="text-center mb-8">
+                      <h2 className="text-3xl font-bold text-gray-800 mb-2">
+                        {categoryName}
                       </h2>
-                      {selectedCategory !== 'all' && (
-                        <p className="text-sm mt-1 text-gray-600">
-                          dans la catégorie "{selectedCategory}"
-                        </p>
-                      )}
-                      {searchTerm && (
-                        <p className="text-sm mt-1 text-gray-600">
-                          pour "{searchTerm}"
-                        </p>
-                      )}
+                      <div className="w-24 h-1 mx-auto rounded" style={{ backgroundColor: '#EF476F' }}></div>
                     </div>
-                    <div className="flex items-center space-x-2 px-3 py-1 rounded-full bg-gray-100 text-gray-600">
-                      <Package className="h-4 w-4" />
-                      <span className="text-sm font-medium">Catalogue</span>
+                    
+                    {/* Grille des produits de cette catégorie */}
+                    <div className={`grid gap-6 ${
+                      viewMode === 'grid' 
+                        ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' 
+                        : 'grid-cols-1 max-w-4xl mx-auto'
+                    }`}>
+                      {categoryProducts.map((product) => (
+                        <ProductCard key={product.id} product={product} />
+                      ))}
                     </div>
                   </div>
-                </div>
-              )}
-              
-              {/* Products Grid */}
-              <div className={`grid gap-8 ${
-                viewMode === 'grid' 
-                  ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
-                  : 'grid-cols-1 max-w-4xl mx-auto'
-              }`}>
-                {filteredProducts.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
-
-              {/* No Products Message */}
-              {filteredProducts.length === 0 && (
+                ))
+              ) : (
+                // Message quand aucun produit trouvé
                 <div className="text-center py-20">
                   <div className="mx-auto w-24 h-24 rounded-full flex items-center justify-center mb-6 border bg-gray-100 border-gray-200">
                     <Package className="h-12 w-12 text-gray-400" />
