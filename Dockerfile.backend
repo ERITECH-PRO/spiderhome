@@ -1,0 +1,23 @@
+# Backend Dockerfile
+FROM node:20-alpine AS deps
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=optional
+
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+# Build server-only artifacts (no frontend build here)
+RUN npm run build:server || echo "build:server should compile server to dist/"
+
+FROM node:20-alpine AS runner
+ENV NODE_ENV=production
+WORKDIR /app
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/public ./public
+COPY --from=build /app/server.js ./server.js
+COPY --from=build /app/package*.json ./
+EXPOSE 3003
+CMD ["node", "server.js"]

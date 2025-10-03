@@ -1,0 +1,13 @@
+# Frontend Dockerfile
+FROM node:20-alpine AS deps
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=optional
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+ENV VITE_PROXY_TARGET=http://185.183.35.80:3003
+EXPOSE 5175
+CMD ["npm", "run", "dev", "--", "--port", "5175", "--host", "0.0.0.0"]
