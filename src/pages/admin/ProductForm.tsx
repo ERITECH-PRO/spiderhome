@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Save, Plus, Trash2, Package, Settings, Search, Eye, ChevronRight, ChevronLeft, Upload } from 'lucide-react';
+import { X, Save, Plus, Trash2, Package, Settings, Search, Eye, ChevronRight, ChevronLeft, Upload, FileText, Download } from 'lucide-react';
 import { getImageUrl } from '../../config/config';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -17,6 +17,7 @@ interface ProductFormData {
   slug: string;
   reference: string;
   category: string;
+  subcategory?: string;
   short_description: string;
   long_description: string;
   images: ProductImage[];
@@ -45,13 +46,17 @@ const ProductForm = ({ isOpen, onClose, productId }: ProductFormProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [uploading, setUploading] = useState(false);
+  const [uploadingPdf, setUploadingPdf] = useState(false);
   const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const pdfInputRef = useRef<HTMLInputElement>(null);
+  const [categoryOptions, setCategoryOptions] = useState<Array<{ id: number; name: string; subcategories: string[] }>>([]);
   const [formData, setFormData] = useState<ProductFormData>({
     title: '',
     slug: '',
     reference: '',
     category: '',
+    subcategory: '',
     short_description: '',
     long_description: '',
     images: [],
@@ -66,9 +71,40 @@ const ProductForm = ({ isOpen, onClose, productId }: ProductFormProps) => {
     meta_description: ''
   });
 
-  const categories = [
-    'Interfaces', 'Mesure', 'Éclairage', 'Climatisation', 'Sécurité', 'Contrôleurs'
-  ];
+  // Charger les catégories dynamiques (admin)
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const token = localStorage.getItem('admin_token');
+        const res = await fetch('/api/admin/categories', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const normalized = Array.isArray(data) ? data.map((c: any) => ({
+          id: Number(c.id),
+          name: String(c.name),
+          subcategories: Array.isArray(c.subcategories) ? c.subcategories : []
+        })) : [];
+        setCategoryOptions(normalized);
+      } catch (e) {
+        // silencieux
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  const currentSubcategories = (() => {
+    const found = categoryOptions.find(c => c.name === formData.category);
+    return found && Array.isArray(found.subcategories) ? found.subcategories : [];
+  })();
+
+  // Réinitialiser la sous-catégorie si la catégorie change et ne contient plus la valeur sélectionnée
+  useEffect(() => {
+    if (formData.subcategory && !currentSubcategories.includes(formData.subcategory)) {
+      setFormData(prev => ({ ...prev, subcategory: '' }));
+    }
+  }, [formData.category, categoryOptions]);
 
 
   useEffect(() => {
@@ -113,7 +149,8 @@ const ProductForm = ({ isOpen, onClose, productId }: ProductFormProps) => {
           benefits: product.benefits || [],
           downloads: product.downloads || [],
           compatibility: product.compatibility || [],
-          related_products: product.related_products || []
+          related_products: product.related_products || [],
+          subcategory: product.subcategory || ''
         });
         // Mark slug as manually edited when loading existing product
         setIsSlugManuallyEdited(true);
@@ -326,6 +363,93 @@ const ProductForm = ({ isOpen, onClose, productId }: ProductFormProps) => {
     }));
   };
 
+  const handlePdfUpload = async (files: FileList) => {
+    setUploadingPdf(true);
+    try {
+      const token = localStorage.getItem('admin_token');
+      const uploadPromises = Array.from(files).map(async (file) => {
+        // Validate file type
+        if (file.type !== 'application/pdf') {
+          throw new Error(`${file.name} n'est pas un fichier PDF valide`);
+        }
+
+        // Validate file size (max 10MB)
+        if (file.size > 10 * 1024 * 1024) {
+          throw new Error(`${file.name} est trop volumineux (max 10MB)`);
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch('/api/admin/upload-pdf', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData
+        });
+
+        if (!response.ok) {
+          throw new Error(`Erreur lors de l'upload de ${file.name}`);
+        }
+
+        const result = await response.json();
+        return {
+          name: file.name.replace('.pdf', ''),
+          type: 'Fiche technique',
+          url: result.url,
+          size: (file.size / 1024 / 1024).toFixed(2) + ' MB',
+          language: 'Français'
+        };
+      });
+
+      const uploadedPdfs = await Promise.all(uploadPromises);
+      
+      setFormData(prev => ({
+        ...prev,
+        downloads: [...prev.downloads, ...uploadedPdfs]
+      }));
+
+    } catch (error) {
+      console.error('Erreur lors de l\'upload des PDFs:', error);
+      alert(error instanceof Error ? error.message : 'Erreur lors de l\'upload des fichiers PDF');
+    } finally {
+      setUploadingPdf(false);
+    }
+  };
+
+  const handlePdfFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      handlePdfUpload(files);
+    }
+    // Reset input value to allow selecting the same files again
+    e.target.value = '';
+  };
+
+  const addDownload = () => {
+    setFormData(prev => ({
+      ...prev,
+      downloads: [...prev.downloads, { name: '', type: 'Fiche technique', url: '', size: '', language: 'Français' }]
+    }));
+  };
+
+  const removeDownload = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      downloads: prev.downloads.filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateDownload = (index: number, field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      downloads: prev.downloads.map((download, i) => 
+        i === index ? { ...download, [field]: value } : download
+      )
+    }));
+  };
+
   // Modal drag functionality
   const handleMouseDown = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
@@ -357,6 +481,7 @@ const ProductForm = ({ isOpen, onClose, productId }: ProductFormProps) => {
     { id: 'basic', label: 'Informations', icon: Package },
     { id: 'specs', label: 'Spécifications', icon: Settings },
     { id: 'benefits', label: 'Bénéfices', icon: Eye },
+    { id: 'downloads', label: 'Téléchargements', icon: Download },
     { id: 'seo', label: 'SEO', icon: Search }
   ];
 
@@ -456,7 +581,7 @@ const ProductForm = ({ isOpen, onClose, productId }: ProductFormProps) => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-                      <label className="block text-sm font-medium ${isDark ? 'text-theme-primary' : 'text-gray-700'} mb-2">
+                      <label className={`block text-sm font-medium ${isDark ? 'text-theme-primary' : 'text-gray-700'} mb-2`}>
                 Titre du produit *
               </label>
               <input
@@ -465,13 +590,13 @@ const ProductForm = ({ isOpen, onClose, productId }: ProductFormProps) => {
                 value={formData.title}
                 onChange={handleChange}
                 required
-                        className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#118AB2] focus:border-transparent transition-all ${isDark ? 'border-theme-primary bg-theme-secondary text-theme-primary' : 'border-gray-300 bg-white text-gray-900'}"
+                        className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#118AB2] focus:border-transparent transition-all ${isDark ? 'border-theme-primary bg-theme-secondary text-theme-primary' : 'border-gray-300 bg-white text-gray-900'}`}
                         placeholder="Nom du produit"
               />
             </div>
 
             <div>
-                       <label className="block text-sm font-medium ${isDark ? 'text-theme-primary' : 'text-gray-700'} mb-2">
+                       <label className={`block text-sm font-medium ${isDark ? 'text-theme-primary' : 'text-gray-700'} mb-2`}>
                 Slug (URL) *
               </label>
                        <div className="flex space-x-2">
@@ -481,7 +606,7 @@ const ProductForm = ({ isOpen, onClose, productId }: ProductFormProps) => {
                 value={formData.slug}
                 onChange={handleChange}
                 required
-                           className="flex-1 px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#118AB2] focus:border-transparent transition-all ${isDark ? 'border-theme-primary bg-theme-secondary text-theme-primary' : 'border-gray-300 bg-white text-gray-900'}"
+                           className={`flex-1 px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#118AB2] focus:border-transparent transition-all ${isDark ? 'border-theme-primary bg-theme-secondary text-theme-primary' : 'border-gray-300 bg-white text-gray-900'}`}
                 placeholder="nom-du-produit"
               />
                          <button
@@ -510,7 +635,7 @@ const ProductForm = ({ isOpen, onClose, productId }: ProductFormProps) => {
             </div>
 
             <div>
-                      <label className="block text-sm font-medium ${isDark ? 'text-theme-primary' : 'text-gray-700'} mb-2">
+                      <label className={`block text-sm font-medium ${isDark ? 'text-theme-primary' : 'text-gray-700'} mb-2`}>
                 Référence *
               </label>
               <input
@@ -519,13 +644,13 @@ const ProductForm = ({ isOpen, onClose, productId }: ProductFormProps) => {
                 value={formData.reference}
                 onChange={handleChange}
                 required
-                        className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#118AB2] focus:border-transparent transition-all ${isDark ? 'border-theme-primary bg-theme-secondary text-theme-primary' : 'border-gray-300 bg-white text-gray-900'}"
+                        className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#118AB2] focus:border-transparent transition-all ${isDark ? 'border-theme-primary bg-theme-secondary text-theme-primary' : 'border-gray-300 bg-white text-gray-900'}`}
                         placeholder="REF-001"
               />
             </div>
 
             <div>
-                      <label className="block text-sm font-medium ${isDark ? 'text-theme-primary' : 'text-gray-700'} mb-2">
+                      <label className={`block text-sm font-medium ${isDark ? 'text-theme-primary' : 'text-gray-700'} mb-2`}>
                 Catégorie *
               </label>
               <select
@@ -533,17 +658,35 @@ const ProductForm = ({ isOpen, onClose, productId }: ProductFormProps) => {
                 value={formData.category}
                 onChange={handleChange}
                 required
-                        className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#118AB2] focus:border-transparent transition-all ${isDark ? 'border-theme-primary bg-theme-secondary text-theme-primary' : 'border-gray-300 bg-white text-gray-900'}"
+                        className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#118AB2] focus:border-transparent transition-all ${isDark ? 'border-theme-primary bg-theme-secondary text-theme-primary' : 'border-gray-300 bg-white text-gray-900'}`}
               >
                 <option value="">Sélectionner une catégorie</option>
-                {categories.map(category => (
-                  <option key={category} value={category}>{category}</option>
+                {categoryOptions.map((c) => (
+                  <option key={c.id} value={c.name}>{c.name}</option>
                 ))}
               </select>
             </div>
 
             <div>
-                      <label className="block text-sm font-medium ${isDark ? 'text-theme-primary' : 'text-gray-700'} mb-2">
+              <label className={`block text-sm font-medium ${isDark ? 'text-theme-primary' : 'text-gray-700'} mb-2`}>
+                Sous-catégorie (optionnel)
+              </label>
+              <select
+                name="subcategory"
+                value={formData.subcategory || ''}
+                onChange={handleChange}
+                disabled={!formData.category || currentSubcategories.length === 0}
+                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#118AB2] focus:border-transparent transition-all ${isDark ? 'border-theme-primary bg-theme-secondary text-theme-primary' : 'border-gray-300 bg-white text-gray-900'} ${(!formData.category || currentSubcategories.length === 0) ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                <option value="">Aucune</option>
+                {currentSubcategories.map((sc) => (
+                  <option key={sc} value={sc}>{sc}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+                      <label className={`block text-sm font-medium ${isDark ? 'text-theme-primary' : 'text-gray-700'} mb-2`}>
                         Images du produit
               </label>
                       
@@ -640,7 +783,7 @@ const ProductForm = ({ isOpen, onClose, productId }: ProductFormProps) => {
                   onChange={handleChange}
                   className="h-4 w-4 text-[#EF476F] focus:ring-[#EF476F] border-gray-300 rounded"
                 />
-                        <span className="ml-2 text-sm ${isDark ? 'text-theme-primary' : 'text-gray-700'}">Nouveau produit</span>
+                        <span className={`ml-2 text-sm ${isDark ? 'text-theme-primary' : 'text-gray-700'}`}>Nouveau produit</span>
               </label>
 
               <label className="flex items-center">
@@ -651,14 +794,14 @@ const ProductForm = ({ isOpen, onClose, productId }: ProductFormProps) => {
                   onChange={handleChange}
                   className="h-4 w-4 text-[#EF476F] focus:ring-[#EF476F] border-gray-300 rounded"
                 />
-                        <span className="ml-2 text-sm ${isDark ? 'text-theme-primary' : 'text-gray-700'}">Produit vedette</span>
+                        <span className={`ml-2 text-sm ${isDark ? 'text-theme-primary' : 'text-gray-700'}`}>Produit vedette</span>
               </label>
             </div>
           </div>
 
                   <div className="mt-6 space-y-6">
                     <div>
-                      <label className="block text-sm font-medium ${isDark ? 'text-theme-primary' : 'text-gray-700'} mb-2">
+                      <label className={`block text-sm font-medium ${isDark ? 'text-theme-primary' : 'text-gray-700'} mb-2`}>
               Description courte *
             </label>
             <textarea
@@ -667,13 +810,13 @@ const ProductForm = ({ isOpen, onClose, productId }: ProductFormProps) => {
               onChange={handleChange}
               required
               rows={3}
-                        className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#118AB2] focus:border-transparent transition-all ${isDark ? 'border-theme-primary bg-theme-secondary text-theme-primary' : 'border-gray-300 bg-white text-gray-900'}"
+                        className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#118AB2] focus:border-transparent transition-all ${isDark ? 'border-theme-primary bg-theme-secondary text-theme-primary' : 'border-gray-300 bg-white text-gray-900'}`}
                         placeholder="Description courte du produit"
             />
           </div>
 
                     <div>
-                      <label className="block text-sm font-medium ${isDark ? 'text-theme-primary' : 'text-gray-700'} mb-2">
+                      <label className={`block text-sm font-medium ${isDark ? 'text-theme-primary' : 'text-gray-700'} mb-2`}>
               Description longue
             </label>
             <textarea
@@ -681,7 +824,7 @@ const ProductForm = ({ isOpen, onClose, productId }: ProductFormProps) => {
               value={formData.long_description}
               onChange={handleChange}
               rows={5}
-                        className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#118AB2] focus:border-transparent transition-all ${isDark ? 'border-theme-primary bg-theme-secondary text-theme-primary' : 'border-gray-300 bg-white text-gray-900'}"
+                        className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#118AB2] focus:border-transparent transition-all ${isDark ? 'border-theme-primary bg-theme-secondary text-theme-primary' : 'border-gray-300 bg-white text-gray-900'}`}
                         placeholder="Description détaillée du produit"
             />
           </div>
@@ -717,14 +860,14 @@ const ProductForm = ({ isOpen, onClose, productId }: ProductFormProps) => {
                   placeholder="Nom de la spécification"
                   value={spec.name}
                   onChange={(e) => updateSpecification(index, 'name', e.target.value)}
-                          className="flex-1 px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#118AB2] focus:border-transparent transition-all ${isDark ? 'border-theme-primary bg-theme-secondary text-theme-primary' : 'border-gray-300 bg-white text-gray-900'}"
+                          className={`flex-1 px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#118AB2] focus:border-transparent transition-all ${isDark ? 'border-theme-primary bg-theme-secondary text-theme-primary' : 'border-gray-300 bg-white text-gray-900'}`}
                 />
                 <input
                   type="text"
                   placeholder="Valeur"
                   value={spec.value}
                   onChange={(e) => updateSpecification(index, 'value', e.target.value)}
-                          className="flex-1 px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#118AB2] focus:border-transparent transition-all ${isDark ? 'border-theme-primary bg-theme-secondary text-theme-primary' : 'border-gray-300 bg-white text-gray-900'}"
+                          className={`flex-1 px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#118AB2] focus:border-transparent transition-all ${isDark ? 'border-theme-primary bg-theme-secondary text-theme-primary' : 'border-gray-300 bg-white text-gray-900'}`}
                 />
                 <input
                   type="text"
@@ -782,14 +925,14 @@ const ProductForm = ({ isOpen, onClose, productId }: ProductFormProps) => {
                             placeholder="Icône (ex: 🚀, ⚡, 💡)"
                     value={benefit.icon}
                     onChange={(e) => updateBenefit(index, 'icon', e.target.value)}
-                            className="px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#118AB2] focus:border-transparent transition-all ${isDark ? 'border-theme-primary bg-theme-secondary text-theme-primary' : 'border-gray-300 bg-white text-gray-900'}"
+                            className={`px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#118AB2] focus:border-transparent transition-all ${isDark ? 'border-theme-primary bg-theme-secondary text-theme-primary' : 'border-gray-300 bg-white text-gray-900'}`}
                   />
                   <input
                     type="text"
                             placeholder="Titre du bénéfice"
                     value={benefit.title}
                     onChange={(e) => updateBenefit(index, 'title', e.target.value)}
-                            className="px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#118AB2] focus:border-transparent transition-all ${isDark ? 'border-theme-primary bg-theme-secondary text-theme-primary' : 'border-gray-300 bg-white text-gray-900'}"
+                            className={`px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#118AB2] focus:border-transparent transition-all ${isDark ? 'border-theme-primary bg-theme-secondary text-theme-primary' : 'border-gray-300 bg-white text-gray-900'}`}
                   />
                   <button
                     type="button"
@@ -804,7 +947,7 @@ const ProductForm = ({ isOpen, onClose, productId }: ProductFormProps) => {
                   value={benefit.description}
                   onChange={(e) => updateBenefit(index, 'description', e.target.value)}
                           rows={3}
-                          className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#118AB2] focus:border-transparent transition-all ${isDark ? 'border-theme-primary bg-theme-secondary text-theme-primary' : 'border-gray-300 bg-white text-gray-900'}"
+                          className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#118AB2] focus:border-transparent transition-all ${isDark ? 'border-theme-primary bg-theme-secondary text-theme-primary' : 'border-gray-300 bg-white text-gray-900'}`}
                 />
               </div>
             ))}
@@ -820,6 +963,148 @@ const ProductForm = ({ isOpen, onClose, productId }: ProductFormProps) => {
         </div>
             )}
 
+            {/* Downloads Tab */}
+            {activeTab === 'downloads' && (
+              <div className="space-y-6">
+                <div className={`rounded-xl shadow-sm border p-6 ${isDark ? 'bg-theme-tertiary border-theme-primary' : 'bg-white border-gray-200'}`}>
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+                      <Download className="h-5 w-5 mr-2 text-[#118AB2]" />
+                      Fichiers de téléchargement
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={addDownload}
+                      className="bg-gradient-to-r from-[#118AB2] to-[#073B4C] text-white px-4 py-2 rounded-xl hover:shadow-lg transition-all flex items-center"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Ajouter manuellement
+                    </button>
+                  </div>
+
+                  {/* PDF Upload Area */}
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      Upload de fichiers PDF
+                    </label>
+                    <div 
+                      className="relative border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-[#118AB2] transition-colors cursor-pointer"
+                      onClick={() => pdfInputRef.current?.click()}
+                    >
+                      <input
+                        ref={pdfInputRef}
+                        type="file"
+                        accept=".pdf"
+                        multiple
+                        onChange={handlePdfFileChange}
+                        className="hidden"
+                      />
+                      
+                      {uploadingPdf ? (
+                        <div className="flex flex-col items-center">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#118AB2] mb-2"></div>
+                          <p className="text-sm text-gray-600">Upload en cours...</p>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center">
+                          <div className="p-3 bg-gray-100 rounded-full mb-3">
+                            <FileText className="h-6 w-6 text-gray-400" />
+                          </div>
+                          <p className="text-sm text-gray-600 mb-1">Cliquez pour télécharger des fichiers PDF</p>
+                          <p className="text-xs text-gray-500">PDF jusqu'à 10MB chacun</p>
+                          <p className="text-xs text-gray-400 mt-1">Vous pouvez sélectionner plusieurs fichiers</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Downloads List */}
+                  <div className="space-y-4">
+                    {formData.downloads.map((download, index) => (
+                      <div key={index} className="p-4 border border-gray-200 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
+                        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Nom</label>
+                            <input
+                              type="text"
+                              placeholder="Nom du fichier"
+                              value={download.name}
+                              onChange={(e) => updateDownload(index, 'name', e.target.value)}
+                              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#118AB2] focus:border-transparent transition-all text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Type</label>
+                            <select
+                              value={download.type}
+                              onChange={(e) => updateDownload(index, 'type', e.target.value)}
+                              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#118AB2] focus:border-transparent transition-all text-sm"
+                            >
+                              <option value="Fiche technique">Fiche technique</option>
+                              <option value="Manuel">Manuel</option>
+                              <option value="Notice">Notice</option>
+                              <option value="Schéma">Schéma</option>
+                              <option value="Certificat">Certificat</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">URL</label>
+                            <input
+                              type="url"
+                              placeholder="https://..."
+                              value={download.url}
+                              onChange={(e) => updateDownload(index, 'url', e.target.value)}
+                              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#118AB2] focus:border-transparent transition-all text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Taille</label>
+                            <input
+                              type="text"
+                              placeholder="2.5 MB"
+                              value={download.size}
+                              onChange={(e) => updateDownload(index, 'size', e.target.value)}
+                              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#118AB2] focus:border-transparent transition-all text-sm"
+                            />
+                          </div>
+                          <div className="flex items-end space-x-2">
+                            <div className="flex-1">
+                              <label className="block text-xs font-medium text-gray-500 mb-1">Langue</label>
+                              <select
+                                value={download.language}
+                                onChange={(e) => updateDownload(index, 'language', e.target.value)}
+                                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#118AB2] focus:border-transparent transition-all text-sm"
+                              >
+                                <option value="Français">Français</option>
+                                <option value="Anglais">Anglais</option>
+                                <option value="Espagnol">Espagnol</option>
+                                <option value="Allemand">Allemand</option>
+                              </select>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeDownload(index)}
+                              className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+                              title="Supprimer"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {formData.downloads.length === 0 && (
+                      <div className="text-center py-8 text-gray-500">
+                        <Download className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                        <p>Aucun fichier de téléchargement ajouté</p>
+                        <p className="text-sm">Cliquez sur "Ajouter manuellement" ou uploadez des PDFs</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* SEO Tab */}
             {activeTab === 'seo' && (
               <div className="space-y-6">
@@ -831,7 +1116,7 @@ const ProductForm = ({ isOpen, onClose, productId }: ProductFormProps) => {
                   
                   <div className="space-y-6">
             <div>
-                      <label className="block text-sm font-medium ${isDark ? 'text-theme-primary' : 'text-gray-700'} mb-2">
+                      <label className={`block text-sm font-medium ${isDark ? 'text-theme-primary' : 'text-gray-700'} mb-2`}>
                 Titre SEO
               </label>
               <input
@@ -839,14 +1124,14 @@ const ProductForm = ({ isOpen, onClose, productId }: ProductFormProps) => {
                 name="meta_title"
                 value={formData.meta_title}
                 onChange={handleChange}
-                        className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#118AB2] focus:border-transparent transition-all ${isDark ? 'border-theme-primary bg-theme-secondary text-theme-primary' : 'border-gray-300 bg-white text-gray-900'}"
+                        className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#118AB2] focus:border-transparent transition-all ${isDark ? 'border-theme-primary bg-theme-secondary text-theme-primary' : 'border-gray-300 bg-white text-gray-900'}`}
                         placeholder="Titre optimisé pour les moteurs de recherche"
               />
                       <p className="text-xs text-gray-500 mt-1">Recommandé: 50-60 caractères</p>
             </div>
 
             <div>
-                      <label className="block text-sm font-medium ${isDark ? 'text-theme-primary' : 'text-gray-700'} mb-2">
+                      <label className={`block text-sm font-medium ${isDark ? 'text-theme-primary' : 'text-gray-700'} mb-2`}>
                 Description SEO
               </label>
               <textarea
@@ -854,7 +1139,7 @@ const ProductForm = ({ isOpen, onClose, productId }: ProductFormProps) => {
                 value={formData.meta_description}
                 onChange={handleChange}
                         rows={4}
-                        className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#118AB2] focus:border-transparent transition-all ${isDark ? 'border-theme-primary bg-theme-secondary text-theme-primary' : 'border-gray-300 bg-white text-gray-900'}"
+                        className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#118AB2] focus:border-transparent transition-all ${isDark ? 'border-theme-primary bg-theme-secondary text-theme-primary' : 'border-gray-300 bg-white text-gray-900'}`}
                         placeholder="Description optimisée pour les moteurs de recherche"
               />
                       <p className="text-xs text-gray-500 mt-1">Recommandé: 150-160 caractères</p>
@@ -876,7 +1161,7 @@ const ProductForm = ({ isOpen, onClose, productId }: ProductFormProps) => {
                         setActiveTab(tabs[currentIndex - 1].id);
                       }
                     }}
-                    className="flex items-center px-4 py-2 ${isDark ? 'text-theme-secondary hover:text-theme-primary' : 'text-gray-600 hover:text-gray-800'} transition-colors"
+                    className={`flex items-center px-4 py-2 ${isDark ? 'text-theme-secondary hover:text-theme-primary' : 'text-gray-600 hover:text-gray-800'} transition-colors`}
                   >
                     <ChevronLeft className="h-4 w-4 mr-1" />
                     Précédent
@@ -916,7 +1201,7 @@ const ProductForm = ({ isOpen, onClose, productId }: ProductFormProps) => {
                         setActiveTab(tabs[currentIndex + 1].id);
                       }
                     }}
-                    className="flex items-center px-4 py-2 ${isDark ? 'text-theme-secondary hover:text-theme-primary' : 'text-gray-600 hover:text-gray-800'} transition-colors"
+                    className={`flex items-center px-4 py-2 ${isDark ? 'text-theme-secondary hover:text-theme-primary' : 'text-gray-600 hover:text-gray-800'} transition-colors`}
                   >
                     Suivant
                     <ChevronRight className="h-4 w-4 ml-1" />

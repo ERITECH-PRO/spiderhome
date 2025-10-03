@@ -17,6 +17,7 @@ import Slides from './pages/admin/Slides';
 import BlogAdmin from './pages/admin/Blog';
 import AdminFeatures from './pages/admin/Features';
 import FeatureForm from './pages/admin/FeatureForm';
+import AdminCategories from './pages/admin/Categories';
 import AdminLayout from './components/admin/AdminLayout';
 import ProtectedRoute from './components/admin/ProtectedRoute';
 import ScrollToTop from './components/ScrollToTop';
@@ -93,6 +94,13 @@ function App() {
                 <ProtectedRoute>
                   <AdminLayout>
                     <AdminFeatures />
+                  </AdminLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="dashboard/categories" element={
+                <ProtectedRoute>
+                  <AdminLayout>
+                    <AdminCategories />
                   </AdminLayout>
                 </ProtectedRoute>
               } />

@@ -47,6 +47,7 @@ export const initializeTables = async () => {
         slug VARCHAR(255) UNIQUE NOT NULL,
         reference VARCHAR(100) NOT NULL,
         category VARCHAR(100) NOT NULL,
+        subcategory VARCHAR(150),
         short_description TEXT,
         long_description TEXT,
         image_url VARCHAR(500),
@@ -56,6 +57,7 @@ export const initializeTables = async () => {
         downloads JSON,
         compatibility JSON,
         related_products JSON,
+        is_active BOOLEAN DEFAULT TRUE,
         is_new BOOLEAN DEFAULT FALSE,
         featured BOOLEAN DEFAULT FALSE,
         meta_title VARCHAR(255),
@@ -123,6 +125,76 @@ export const initializeTables = async () => {
         INDEX idx_username_time (username, attempted_at)
       )
     `);
+        // Table specifications (spécifications techniques des produits)
+        await connection.execute(`
+      CREATE TABLE IF NOT EXISTS specifications (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        product_id INT NOT NULL,
+        paramètre VARCHAR(255) NOT NULL,
+        valeur VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+        INDEX idx_product_id (product_id)
+      )
+    `);
+        // Table downloads (téléchargements des produits)
+        await connection.execute(`
+      CREATE TABLE IF NOT EXISTS downloads (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        product_id INT NOT NULL,
+        type VARCHAR(255) NOT NULL,
+        url VARCHAR(500) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+        INDEX idx_product_id (product_id)
+      )
+    `);
+        // Table related_products (produits associés)
+        await connection.execute(`
+      CREATE TABLE IF NOT EXISTS related_products (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        product_id INT NOT NULL,
+        related_id INT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+        FOREIGN KEY (related_id) REFERENCES products(id) ON DELETE CASCADE,
+        INDEX idx_product_id (product_id),
+        INDEX idx_related_id (related_id),
+        UNIQUE KEY unique_relation (product_id, related_id)
+      )
+    `);
+        // Table categories (nom + sous-catégories JSON)
+        await connection.execute(`
+      CREATE TABLE IF NOT EXISTS categories (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(150) UNIQUE NOT NULL,
+        subcategories JSON,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+        // Assurer la présence de la colonne subcategory dans products (si base existante)
+        try {
+            const [colCheck] = await connection.execute("SHOW COLUMNS FROM products LIKE 'subcategory'");
+            if (colCheck.length === 0) {
+                await connection.execute('ALTER TABLE products ADD COLUMN subcategory VARCHAR(150) NULL');
+            }
+        }
+        catch (e) {
+            console.warn('Impossible de vérifier/ajouter la colonne subcategory:', e);
+        }
+        // Assurer la présence de la colonne is_active (visibilité publique)
+        try {
+            const [colCheck2] = await connection.execute("SHOW COLUMNS FROM products LIKE 'is_active'");
+            if (colCheck2.length === 0) {
+                await connection.execute('ALTER TABLE products ADD COLUMN is_active BOOLEAN DEFAULT TRUE');
+            }
+        }
+        catch (e) {
+            console.warn('Impossible de vérifier/ajouter la colonne is_active:', e);
+        }
         connection.release();
         console.log('✅ Tables de base de données initialisées avec succès');
         return true;
@@ -157,4 +229,3 @@ export const createDefaultAdmin = async () => {
     }
 };
 export default pool;
-//# sourceMappingURL=database.js.map

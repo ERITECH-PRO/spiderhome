@@ -35,6 +35,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const menuItems = [
     { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/admin/dashboard/products', icon: Package, label: 'Produits' },
+    { path: '/admin/dashboard/categories', icon: Settings, label: 'Catégories' },
     { path: '/admin/dashboard/slides', icon: Image, label: 'Slides' },
     { path: '/admin/dashboard/blog', icon: FileText, label: 'Blog' },
     { path: '/admin/dashboard/features', icon: Settings, label: 'Fonctionnalités' },

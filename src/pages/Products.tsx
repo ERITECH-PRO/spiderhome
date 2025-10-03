@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Filter, SortAsc, Grid, X, Search, Sparkles, Package, Tag } from 'lucide-react';
+import { ArrowRight, Filter, SortAsc, X, Search, Sparkles, Package } from 'lucide-react';
 import SEO from '../components/SEO';
 import LazyImage from '../components/LazyImage';
 import { getImageUrl } from '../config/config';
@@ -56,8 +56,10 @@ const Products = () => {
         if (!response.ok) {
           throw new Error('Erreur lors du chargement des produits');
         }
-        const data = await response.json();
-        setProducts(data);
+        const responseData = await response.json();
+        // Gérer la nouvelle structure { data, pagination } ou l'ancienne structure (tableau direct)
+        const productsData = responseData.data || responseData;
+        setProducts(Array.isArray(productsData) ? productsData : []);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Erreur inconnue');
       } finally {
@@ -70,11 +72,13 @@ const Products = () => {
 
   // Obtenir les catégories uniques depuis les produits
   const categories = useMemo(() => {
+    if (!Array.isArray(products)) return [];
     const uniqueCategories = [...new Set(products.map(p => p.category))];
     return uniqueCategories;
   }, [products]);
 
   const filteredProducts = useMemo(() => {
+    if (!Array.isArray(products)) return [];
     let filtered = products;
     
     // Filtrage par recherche
@@ -125,34 +129,35 @@ const Products = () => {
   }, [filteredProducts]);
 
   const getProductImage = (product: Product) => {
-    if (product.images && product.images.length > 0) {
-      const mainImage = product.images.find(img => img.isMain) || product.images[0];
-      return getImageUrl(mainImage.url);
+    // 1) images[].url absolu
+    if (Array.isArray(product.images) && product.images.length > 0) {
+      const withUrl = product.images.find(img => Boolean(img && img.url));
+      if (withUrl && withUrl.url) {
+        return getImageUrl(withUrl.url);
+      }
     }
+    // 2) image_url
     if (product.image_url) {
       return getImageUrl(product.image_url);
     }
-    return '/placeholder-product.jpg';
+    // 3) fallback
+    return getImageUrl('/uploads/placeholder.jpg');
   };
 
   const ProductCard = ({ product }: { product: Product }) => {
     return (
-      <div className="group relative bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer h-full flex flex-col">
+      <div className="group relative bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer h-full w-[450px] flex flex-col">
         <Link to={`/produits/${product.slug}`} className="block flex flex-col h-full">
           {/* Image Container */}
-          <div className="relative h-80 bg-white flex items-center justify-center p-6">
+          <div className="relative h-[320px] bg-white flex items-center justify-center pt-[58px]">
             <div className="relative flex items-center justify-center">
-              <LazyImage
-                src={getProductImage(product)}
-                alt={product.title}
-                className="object-contain"
-                style={{ 
-                  maxWidth: '240px',
-                  maxHeight: '240px',
-                  width: 'auto',
-                  height: 'auto'
-                }}
-              />
+              <div className="w-[450px] h-full">
+                <LazyImage
+                  src={getProductImage(product)}
+                  alt={product.title}
+                  className="w-full h-full object-contain"
+                />
+              </div>
               
               {/* Badge NOUVEAU */}
               {Boolean(product.is_new) && (
@@ -166,29 +171,29 @@ const Products = () => {
           </div>
           
           {/* Content */}
-          <div className="p-6 flex flex-col h-full">
+          <div className="pt-4 px-7 pb-7 flex flex-col h-full">
             <div className="flex-1">
-              <h3 className="text-base font-semibold mb-2 text-gray-900 text-center uppercase tracking-wide">
+              <h3 className="text-lg md:text-xl font-extrabold mb-3 text-gray-900 text-center pt-[80px]">
                 {product.title}
               </h3>
-              
-              <p className="text-sm mb-4 text-gray-700 text-center leading-relaxed">
-                {product.short_description}
-              </p>
-            </div>
-            
-            {/* Bottom Section */}
-            <div className="text-center">
-              {/* Model */}
-              <div className="mb-4">
-                <span className="text-sm font-medium text-gray-600">
+
+              {/* Model / Nom du produit */}
+              <div className="mb-3 text-center">
+                <span className="text-base md:text-lg font-semibold text-blue-700 uppercase tracking-wide">
                   {product.reference}
                 </span>
               </div>
-              
+
+              <p className="text-[15px] md:text-base mb-4 text-gray-800 text-center leading-relaxed">
+                {product.short_description}
+              </p>
+            </div>
+
+            {/* Bottom Section */}
+            <div className="text-center">
               {/* Action Button */}
-              <div className="inline-flex items-center text-sm font-medium transition-colors" style={{ color: '#118AB2' }}>
-                <span className="hover:opacity-80">Pour en savoir plus</span>
+              <div className="inline-flex items-center text-sm font-medium transition-colors text-blue-700 hover:text-blue-800">
+                <span className="hover:opacity-90">Pour en savoir plus</span>
               </div>
             </div>
           </div>
@@ -198,7 +203,7 @@ const Products = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="pt-20 min-h-screen bg-gray-50">
       <SEO
         title="Produits & Modules SpiderHome - Domotique Intelligente"
         description="Découvrez notre gamme complète de dispositifs connectés pour transformer votre maison en habitat intelligent et économe. Interfaces, éclairage, sécurité, climatisation."
@@ -207,39 +212,13 @@ const Products = () => {
       />
       
       {/* Hero Section */}
-      <section className="relative overflow-hidden py-20 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800">
-        <div className="absolute inset-0 bg-black/20"></div>
-        <div className="absolute inset-0">
-          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-500/10 to-blue-600/10"></div>
-        </div>
-        <div className="container mx-auto px-4 relative z-10">
+      <section className="bg-gradient-to-br from-[#0B0C10] to-[#118AB2] text-white py-20">
+        <div className="container mx-auto px-4">
           <div className="text-center max-w-5xl mx-auto">
-            <div className="inline-flex items-center px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 mb-6">
-              <Sparkles className="w-4 h-4 text-white mr-2" />
-              <span className="text-white/90 text-sm font-medium">Catalogue de produits</span>
-            </div>
-            <h1 className="text-5xl md:text-6xl font-bold mb-6 text-white">
-              Produits & Modules
-              <span className="block bg-gradient-to-r from-blue-300 to-blue-100 bg-clip-text text-transparent">
-                SpiderHome
-              </span>
-            </h1>
-            <p className="text-xl mb-8 text-white/80 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-xl mb-0 text-gray-200 max-w-3xl mx-auto leading-relaxed">
               Découvrez notre gamme complète de dispositifs connectés pour transformer 
               votre maison en habitat intelligent et économe en énergie.
             </p>
-            {!loading && !error && products.length > 0 && (
-              <div className="flex flex-col sm:flex-row justify-center gap-4">
-                <div className="inline-flex items-center px-6 py-3 rounded-full bg-white/20 text-white border border-white/30 backdrop-blur-sm">
-                  <Package className="w-5 h-5 mr-2" />
-                  <span className="font-medium">{products.length} Produits</span>
-                </div>
-                <div className="inline-flex items-center px-6 py-3 rounded-full bg-white/20 text-white border border-white/30 backdrop-blur-sm">
-                  <Tag className="w-5 h-5 mr-2" />
-                  <span className="font-medium">{categories.length} Catégories</span>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </section>

@@ -1,9 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, Navigate } from 'react-router-dom';
-import { Download, ChevronLeft, ChevronRight, X, Home, Package, ExternalLink, ZoomIn } from 'lucide-react';
+import { Download, ChevronLeft, ChevronRight, X, Home, Package, ZoomIn, FileText, ArrowRight, CheckCircle } from 'lucide-react';
 import SEO from '../components/SEO';
-import LazyImage from '../components/LazyImage';
 import { getImageUrl } from '../config/config';
+
+interface ProductImage {
+  id: string;
+  url: string;
+  filename: string;
+  originalName: string;
+  size: number;
+  isMain?: boolean;
+}
 
 interface Product {
   id: number;
@@ -14,7 +22,7 @@ interface Product {
   short_description: string;
   long_description: string;
   image_url: string;
-  images?: any[];
+  images?: ProductImage[];
   specifications: any;
   benefits: any;
   downloads: any;
@@ -34,6 +42,7 @@ const ProductDetail = () => {
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showImageModal, setShowImageModal] = useState(false);
+  const [activeTab, setActiveTab] = useState('description');
 
   // Helper function to get all product images
   const getProductImages = () => {
@@ -76,15 +85,10 @@ const ProductDetail = () => {
       if (slug) {
         try {
           setLoading(true);
-          const response = await fetch(`/api/products`);
+          const response = await fetch(`/api/products/${slug}`);
           if (response.ok) {
-            const products = await response.json();
-            const foundProduct = products.find((p: Product) => p.slug === slug);
-            if (foundProduct) {
-              setProduct(foundProduct);
-            } else {
-              setProduct(null);
-            }
+            const productData = await response.json();
+            setProduct(productData);
           } else {
             setProduct(null);
           }
@@ -135,6 +139,11 @@ const ProductDetail = () => {
     return <Navigate to="/produits" replace />;
   }
 
+  // Utiliser les vraies données de la base de données
+  const specifications = product?.specifications || [];
+  const downloads = product?.downloads || [];
+  const relatedProducts = product?.related_products || [];
+
   return (
     <div className="pt-20">
       <SEO
@@ -166,19 +175,24 @@ const ProductDetail = () => {
               Produits
             </Link>
             <span className="text-gray-400">/</span>
-            <span className="text-[#0B0C10]">{product.title}</span>
+            <span className="text-[#0B0C10]">{product.category}</span>
+            <span className="text-gray-400">/</span>
+            <span className="text-[#0B0C10] font-medium">{product.title}</span>
           </nav>
         </div>
       </section>
 
-      {/* Contenu principal */}
-      <section className="py-16 bg-gradient-to-br from-gray-50 to-white">
+
+
+      {/* Zone principale - 2 colonnes */}
+      <section className="py-12 bg-white">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
-            {/* Image du produit */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            {/* Colonne gauche - Images */}
             <div className="space-y-4">
+              {/* Image principale */}
               <div className="relative group">
-                <div className="aspect-square bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl overflow-hidden shadow-xl group-hover:shadow-2xl transition-all duration-300">
+                <div className="aspect-square bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl overflow-hidden shadow-lg group-hover:shadow-xl transition-all duration-300">
                   {currentImage ? (
                     <img
                       src={getImageUrl(currentImage.url)}
@@ -233,141 +247,262 @@ const ProductDetail = () => {
                 
                 {/* Badge Nouveau */}
                 {Boolean(product.is_new) && (
-                  <div className="absolute top-6 left-6 bg-[#118AB2] text-white text-sm px-4 py-2 rounded-full font-medium shadow-lg">
+                  <div className="absolute top-4 left-4 bg-[#EF476F] text-white text-sm px-3 py-1 rounded-full font-medium shadow-lg">
                     NOUVEAU
                   </div>
                 )}
               </div>
               
-               {/* Thumbnail gallery */}
-               {productImages.length > 1 && (
-                 <div className="flex space-x-2 pb-2">
-                   {/* Show first 2 images */}
-                   {productImages.slice(0, 2).map((image, index) => (
-                     <button
-                       key={image.id}
-                       onClick={() => setCurrentImageIndex(index)}
-                       className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all duration-200 ${
-                         index === currentImageIndex
-                           ? 'border-[#118AB2] shadow-lg'
-                           : 'border-gray-200 hover:border-gray-300'
-                       }`}
-                     >
-                       <img
-                         src={getImageUrl(image.url)}
-                         alt={`${product.title} - Image ${index + 1}`}
-                         className="w-full h-full object-cover"
-                       />
-                     </button>
-                   ))}
-                   
-                   {/* Show 3rd image with overflow indicator */}
-                   {productImages.length >= 3 && (
-                     <button
-                       onClick={() => productImages.length > 3 ? setShowImageModal(true) : setCurrentImageIndex(2)}
-                       className={`relative flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all duration-200 ${
-                         2 === currentImageIndex
-                           ? 'border-[#118AB2] shadow-lg'
-                           : 'border-gray-200 hover:border-gray-300'
-                       }`}
-                     >
-                       <img
-                         src={getImageUrl(productImages[2].url)}
-                         alt={`${product.title} - Image 3`}
-                         className="w-full h-full object-cover"
-                       />
-                       
-                       {/* Overflow overlay for 4+ images */}
-                       {productImages.length > 3 && (
-                         <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
-                           <span className="text-xs font-medium text-white">
-                             +{productImages.length - 3}
-                           </span>
-                         </div>
-                       )}
-                     </button>
-                   )}
-                 </div>
-               )}
+              {/* Miniatures */}
+              {productImages.length > 1 && (
+                <div className="flex space-x-2 overflow-x-auto pb-2">
+                  {productImages.map((image, index) => (
+                    <button
+                      key={image.id}
+                      onClick={() => setCurrentImageIndex(index)}
+                      className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all duration-200 ${
+                        index === currentImageIndex
+                          ? 'border-[#118AB2] shadow-lg'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <img
+                        src={getImageUrl(image.url)}
+                        alt={`${product.title} - Image ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Informations produit */}
+            {/* Colonne droite - Informations */}
             <div className="space-y-8">
-              {/* Titre et référence */}
+              {/* Nom du produit */}
               <div>
-                <h1 className="text-4xl font-bold text-gray-900 mb-4 leading-tight">
+                <h2 className="text-2xl md:text-3xl font-bold text-[#0B0C10] mb-2">
                   {product.title}
-                </h1>
-                {product.reference && product.reference !== "0" && (
-                  <div className="inline-flex items-center space-x-2 bg-[#118AB2]/10 text-[#118AB2] px-4 py-2 rounded-full">
-                    <Package className="w-4 h-4" />
-                    <span className="font-medium">Référence: {product.reference}</span>
-                  </div>
-                )}
+                </h2>
+                <div className="text-lg text-[#118AB2] font-semibold mb-4">
+                  {product.reference}
+                </div>
               </div>
 
               {/* Description courte */}
-              <p className="text-gray-600 text-lg leading-relaxed">
+              <div className="text-gray-700 text-lg leading-relaxed">
                 {product.short_description}
-              </p>
+              </div>
 
-              {/* CTA Principal */}
-              <div className="space-y-6">
+            {/* Caractéristiques principales (dynamiques depuis l'admin) */}
+            {Array.isArray(product.benefits) && product.benefits.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold text-[#0B0C10]">Caractéristiques du produit</h3>
+                <ul className="space-y-2">
+                  {product.benefits.map((benefit: any, index: number) => {
+                    const label = typeof benefit === 'string' 
+                      ? benefit 
+                      : (benefit?.title || benefit?.description || '');
+                    if (!label) return null;
+                    return (
+                      <li key={index} className="flex items-center space-x-2">
+                        <CheckCircle className="w-5 h-5 text-[#118AB2] flex-shrink-0" />
+                        <span className="text-gray-700">{label}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+
+              {/* Boutons CTA */}
+              <div className="space-y-4">
                 <Link
                   to="/contact"
-                  className="block w-full bg-[#118AB2] text-white px-8 py-4 rounded-xl text-lg font-semibold hover:bg-blue-700 transition-all duration-200 transform hover:scale-105 text-center shadow-lg hover:shadow-xl"
+                  className="block w-full bg-[#EF476F] text-white px-8 py-4 rounded-xl text-lg font-semibold hover:bg-red-600 transition-all duration-200 transform hover:scale-105 text-center shadow-lg hover:shadow-xl"
                 >
                   Demander une démo
                 </Link>
                 
-                <div className="grid grid-cols-2 gap-4">
-                  <Link
-                    to="/contact"
-                    className="flex items-center justify-center space-x-2 border-2 border-[#118AB2] text-[#118AB2] px-6 py-3 rounded-xl font-medium hover:bg-[#118AB2] hover:text-white transition-all duration-200 shadow-md hover:shadow-lg"
+                {downloads.length > 0 ? (
+                  <a
+                    href={downloads[0].url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full flex items-center justify-center space-x-2 border-2 border-[#118AB2] text-[#118AB2] px-6 py-3 rounded-xl font-medium hover:bg-[#118AB2] hover:text-white transition-all duration-200 shadow-md hover:shadow-lg"
                   >
-                    <span>Contact</span>
-                    <ExternalLink className="w-4 h-4" />
-                  </Link>
-                  
-                  <button className="flex items-center justify-center space-x-2 border-2 border-[#118AB2] text-[#118AB2] px-6 py-3 rounded-xl font-medium hover:bg-[#118AB2] hover:text-white transition-all duration-200 shadow-md hover:shadow-lg">
-                    <Download className="w-4 h-4" />
-                    <span>Fiche PDF</span>
+                    <Download className="w-5 h-5" />
+                    <span>Télécharger la fiche technique</span>
+                  </a>
+                ) : (
+                  <button 
+                    disabled
+                    className="w-full flex items-center justify-center space-x-2 border-2 border-gray-300 text-gray-400 px-6 py-3 rounded-xl font-medium cursor-not-allowed"
+                  >
+                    <Download className="w-5 h-5" />
+                    <span>Fiche technique non disponible</span>
                   </button>
-                </div>
+                )}
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Description détaillée */}
-      <section className="py-16 bg-white">
+      {/* Onglets */}
+      <section className="py-12 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">Description détaillée</h2>
-              <div className="w-24 h-1 bg-[#118AB2] mx-auto rounded-full"></div>
+            {/* Navigation des onglets */}
+            <div className="flex flex-wrap border-b border-gray-200 mb-8">
+              <button
+                onClick={() => setActiveTab('description')}
+                className={`px-6 py-3 font-medium transition-colors ${
+                  activeTab === 'description'
+                    ? 'text-[#118AB2] border-b-2 border-[#118AB2]'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Description
+              </button>
+              <button
+                onClick={() => setActiveTab('specifications')}
+                className={`px-6 py-3 font-medium transition-colors ${
+                  activeTab === 'specifications'
+                    ? 'text-[#118AB2] border-b-2 border-[#118AB2]'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Spécifications techniques
+              </button>
+              <button
+                onClick={() => setActiveTab('downloads')}
+                className={`px-6 py-3 font-medium transition-colors ${
+                  activeTab === 'downloads'
+                    ? 'text-[#118AB2] border-b-2 border-[#118AB2]'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Téléchargements
+              </button>
             </div>
-            <div className="bg-gray-50 rounded-2xl p-8 shadow-lg">
-              <div className="prose prose-lg max-w-none">
-                <p className="text-gray-700 leading-relaxed text-lg">
-                  {product.long_description}
-                </p>
-              </div>
+
+            {/* Contenu des onglets */}
+            <div className="bg-white rounded-2xl p-8 shadow-lg">
+              {activeTab === 'description' && (
+                <div className="prose prose-lg max-w-none">
+                  <h3 className="text-2xl font-bold text-[#0B0C10] mb-6">Description du produit</h3>
+                  <div className="text-gray-700 leading-relaxed space-y-4">
+                    {product.long_description ? (
+                      <div dangerouslySetInnerHTML={{ __html: product.long_description.replace(/\n/g, '<br>') }} />
+                    ) : (
+                      <p>{product.short_description}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'specifications' && (
+                <div>
+                  <div className="w-full overflow-x-auto">
+                    <div className="min-w-[480px] border border-gray-200 rounded-xl divide-y divide-gray-200">
+                      {specifications.map((spec: any, index: number) => {
+                        const name = spec?.name ?? spec?.label ?? spec?.parametre ?? spec?.paramètre ?? '';
+                        const value = spec?.value ?? spec?.valeur ?? '';
+                        const unit = spec?.unit ?? spec?.unite ?? spec?.unité ?? '';
+                        if (!name && !value && !unit) return null;
+                          return (
+                            <div key={index} className="grid grid-cols-12 gap-0 px-4 py-3 bg-white">
+                              <div className="col-span-6 text-gray-700 pr-4 border-r border-gray-200">{name}</div>
+                              <div className="col-span-4 text-[#118AB2] font-medium pl-4 pr-2">{value} {unit}</div>
+                            </div>
+                          );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'downloads' && (
+                <div>
+                  <h3 className="text-2xl font-bold text-[#0B0C10] mb-6">Documentation</h3>
+                  <div className="space-y-4">
+                    {downloads.length > 0 ? (
+                      downloads.map((download: any, index: number) => (
+                        <a
+                          key={index}
+                          href={download.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:border-[#118AB2] hover:bg-[#118AB2]/5 transition-all duration-200 group"
+                        >
+                          <div className="flex items-center space-x-4">
+                            <div className="w-12 h-12 bg-[#118AB2]/10 rounded-lg flex items-center justify-center group-hover:bg-[#118AB2]/20 transition-colors">
+                              <FileText className="w-6 h-6 text-[#118AB2]" />
+                            </div>
+                            <div>
+                              <div className="font-medium text-gray-900">{download.name}</div>
+                              <div className="text-sm text-gray-500">{download.type} • {download.size}</div>
+                            </div>
+                          </div>
+                          <Download className="w-5 h-5 text-gray-400 group-hover:text-[#118AB2] transition-colors" />
+                        </a>
+                      ))
+                    ) : (
+                      <div className="text-center py-8">
+                        <p className="text-gray-500">Aucun document disponible pour le moment.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
       </section>
 
-      {/* CTA Sticky Mobile */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-50 shadow-lg">
-        <Link
-          to="/contact"
-          className="block w-full bg-[#118AB2] text-white px-6 py-3 rounded-xl text-center font-semibold hover:bg-blue-700 transition-colors shadow-lg"
-        >
-          Demander une démo
-        </Link>
-      </div>
+      {/* Produits similaires */}
+      <section className="py-16 bg-white">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-[#0B0C10] mb-4">Produits similaires</h2>
+            <div className="w-24 h-1 bg-[#EF476F] mx-auto rounded-full"></div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {relatedProducts.length > 0 ? (
+              relatedProducts.map((relatedProduct: any) => (
+                <div key={relatedProduct.id} className="bg-gray-50 rounded-xl p-6 text-center">
+                  <div className="w-16 h-16 bg-gray-200 rounded-lg mx-auto mb-4 overflow-hidden">
+                    {relatedProduct.image_url ? (
+                      <img
+                        src={getImageUrl(relatedProduct.image_url)}
+                        alt={relatedProduct.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gray-300"></div>
+                    )}
+                  </div>
+                  <h3 className="font-semibold text-gray-900 mb-2">{relatedProduct.title}</h3>
+                  <p className="text-sm text-gray-600 mb-4">{relatedProduct.short_description}</p>
+                  <Link
+                    to={`/produits/${relatedProduct.slug}`}
+                    className="inline-flex items-center text-[#118AB2] hover:text-blue-700 font-medium"
+                  >
+                    Voir le produit
+                    <ArrowRight className="w-4 h-4 ml-1" />
+                  </Link>
+                </div>
+              ))
+            ) : (
+              <div className="col-span-full text-center py-8">
+                <p className="text-gray-500">Aucun produit similaire disponible pour le moment.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
 
       {/* Image Modal */}
       {showImageModal && (

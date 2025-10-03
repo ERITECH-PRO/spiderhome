@@ -23,8 +23,35 @@ export const getServerUrl = (path = '') => {
 export const getImageUrl = (imagePath) => {
     if (!imagePath)
         return '/placeholder-product.jpg';
-    if (imagePath.startsWith('http'))
+    // Already absolute URL
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
         return imagePath;
-    return getServerUrl(imagePath);
+    }
+    // Normalize common stored variants to the public '/uploads/' mount
+    let normalized = imagePath.trim();
+    // Handle Windows backslashes from server-side joins
+    normalized = normalized.replace(/\\/g, '/');
+    // Strip known prefixes and map to served path
+    normalized = normalized
+        .replace(/^\/?public\//i, '/')
+        .replace(/^\/?dist\//i, '/')
+        .replace(/^\/?static\//i, '/')
+        .replace(/^\/?assets\//i, '/')
+        .replace(/^\/?images?\//i, '/');
+    // Ensure it points under '/uploads/' when a filename or wrong folder is provided
+    if (!normalized.startsWith('/uploads/')) {
+        // If the path already contains '/uploads' without leading slash
+        const uploadsIdx = normalized.toLowerCase().indexOf('/uploads/');
+        if (uploadsIdx !== -1) {
+            normalized = normalized.substring(uploadsIdx);
+        }
+        else if (/^uploads\//i.test(normalized)) {
+            normalized = '/' + normalized;
+        }
+        else if (!normalized.startsWith('/')) {
+            // Treat as bare filename
+            normalized = `/uploads/${normalized}`;
+        }
+    }
+    return getServerUrl(normalized);
 };
-//# sourceMappingURL=config.js.map

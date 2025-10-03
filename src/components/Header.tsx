@@ -18,7 +18,7 @@ const Header = () => {
   const navItems = [
     { name: 'Accueil', path: '/' },
     { name: 'Fonctionnalités', path: '/fonctionnalites' },
-    { name: 'Produits/Modules', path: '/produits' },
+    { name: 'Produits', path: '/produits' },
     { name: 'À propos', path: '/a-propos' },
     { name: 'Blog/Astuces', path: '/blog' },
     { name: 'Contact', path: '/contact' },
@@ -58,12 +58,12 @@ const Header = () => {
 
           {/* CTA Button */}
           <div className="hidden lg:block">
-            <Link
-              to="/contact"
+            <a
+              href="https://cloud.spiderhome.org/"
               className="bg-[#EF476F] text-white px-6 py-3 rounded-lg font-semibold hover:bg-opacity-90 transition-all duration-200 transform hover:scale-105 shadow-lg"
             >
-              Demander une démo
-            </Link>
+              CONNEXION
+            </a>
           </div>
 
           {/* Mobile Menu Button */}
@@ -97,13 +97,13 @@ const Header = () => {
               </Link>
             ))}
             <div className="mt-4 px-4">
-              <Link
-                to="/contact"
+              <a
+                href="https://cloud.spiderhome.org/"
                 className="block w-full text-center bg-[#EF476F] text-white px-6 py-3 rounded-lg font-semibold hover:bg-opacity-90 transition-all duration-200"
                 onClick={() => setIsMenuOpen(false)}
               >
-                Demander une démo
-              </Link>
+                CONNEXION
+              </a>
             </div>
           </div>
         )}

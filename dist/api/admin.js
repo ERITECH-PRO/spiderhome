@@ -16,10 +16,67 @@ export const requireAuth = (req, res, next) => {
 // API Products
 export const getProducts = async (req, res) => {
     try {
+        const { page = 1, limit = 20, category, is_new } = req.query;
+        const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+        const pageSize = Math.min(Math.max(parseInt(limit, 10) || 20, 1), 100);
+        const offset = (pageNum - 1) * pageSize;
+        const filters = [];
+        const params = [];
+        if (category) {
+            filters.push('category = ?');
+            params.push(category);
+        }
+        if (is_new !== undefined) {
+            filters.push('is_new = ?');
+            params.push(is_new === '1' || is_new === 'true');
+        }
+        const whereClause = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
         const connection = await pool.getConnection();
-        const [rows] = await connection.execute('SELECT * FROM products ORDER BY created_at DESC');
+        // Vérifier si la table products existe
+        const [tableCheck] = await connection.execute("SHOW TABLES LIKE 'products'");
+        if (tableCheck.length === 0) {
+            connection.release();
+            return res.json({
+                data: [],
+                pagination: {
+                    page: pageNum,
+                    limit: pageSize,
+                    total: 0,
+                    pages: 0
+                }
+            });
+        }
+        const limitNum = Number.isFinite(pageSize) ? Math.trunc(pageSize) : 20;
+        const offsetNum = Number.isFinite(offset) ? Math.trunc(offset) : 0;
+        const listQuery = `SELECT id, title, slug, reference, category, short_description, image_url, images, is_new, featured, is_active
+       FROM products ${whereClause}
+       ORDER BY created_at DESC
+       LIMIT ${limitNum} OFFSET ${offsetNum}`;
+        const [rows] = await connection.execute(listQuery, params);
+        const [countRows] = await connection.execute(`SELECT COUNT(*) as total FROM products ${whereClause}`, params);
+        // Normalize images and provide fallback image_url from images JSON
+        const normalizedRows = rows.map((p) => {
+            let images = [];
+            try {
+                images = typeof p.images === 'string' ? JSON.parse(p.images) : (p.images || []);
+            }
+            catch {
+                images = [];
+            }
+            const firstWithUrl = Array.isArray(images) ? images.find((img) => img && img.url) : null;
+            const image_url = p.image_url || (firstWithUrl ? firstWithUrl.url : null);
+            return { ...p, images, image_url };
+        });
         connection.release();
-        res.json(rows);
+        res.json({
+            data: normalizedRows,
+            pagination: {
+                page: pageNum,
+                limit: pageSize,
+                total: countRows[0].total,
+                pages: Math.ceil(countRows[0].total / pageSize)
+            }
+        });
     }
     catch (error) {
         console.error('Erreur lors de la récupération des produits:', error);
@@ -46,6 +103,401 @@ export const getProduct = async (req, res) => {
         res.status(500).json({ error: 'Erreur interne du serveur' });
     }
 };
+// Produit par slug (public)
+export const getProductBySlug = async (req, res) => {
+    try {
+        const { slug } = req.params;
+        const connection = await pool.getConnection();
+        const [rows] = await connection.execute('SELECT * FROM products WHERE slug = ? AND is_active = 1 LIMIT 1', [slug]);
+        connection.release();
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'Produit non trouvé' });
+        }
+        const product = rows[0];
+        // Parser les champs JSON si nécessaire
+        const parseIfString = (v) => {
+            if (typeof v === 'string') {
+                try {
+                    return JSON.parse(v);
+                }
+                catch {
+                    return v;
+                }
+            }
+            return v;
+        };
+        product.images = parseIfString(product.images) || [];
+        product.specifications = parseIfString(product.specifications) || [];
+        product.benefits = parseIfString(product.benefits) || [];
+        product.downloads = parseIfString(product.downloads) || [];
+        product.compatibility = parseIfString(product.compatibility) || [];
+        product.related_products = parseIfString(product.related_products) || [];
+        res.json(product);
+    }
+    catch (error) {
+        console.error('Erreur lors de la récupération du produit par slug:', error);
+        res.status(500).json({ error: 'Erreur interne du serveur' });
+    }
+};
+// Recherche de produits
+export const searchProducts = async (req, res) => {
+    try {
+        const { q = '' } = req.query;
+        const term = `%${String(q).trim()}%`;
+        const connection = await pool.getConnection();
+        // Vérifier si la table products existe
+        const [tableCheck] = await connection.execute("SHOW TABLES LIKE 'products'");
+        if (tableCheck.length === 0) {
+            connection.release();
+            return res.json([]);
+        }
+        const [rows] = await connection.execute(`SELECT id, title, slug, reference, category, short_description, image_url, is_new, featured
+       FROM products
+       WHERE title LIKE ? OR reference LIKE ? OR category LIKE ?
+       ORDER BY created_at DESC
+       LIMIT 50`, [term, term, term]);
+        connection.release();
+        res.json(rows);
+    }
+    catch (error) {
+        console.error('Erreur lors de la recherche de produits:', error);
+        res.status(500).json({ error: 'Erreur interne du serveur' });
+    }
+};
+// API Publique pour les produits
+export const getProductsPublic = async (req, res) => {
+    try {
+        const connection = await pool.getConnection();
+        // Vérifier si la table products existe
+        const [tableCheck] = await connection.execute("SHOW TABLES LIKE 'products'");
+        if (tableCheck.length === 0) {
+            connection.release();
+            return res.json({
+                data: [],
+                pagination: {
+                    totalProducts: 0,
+                    totalPages: 0,
+                    currentPage: 1,
+                    limit: 12
+                }
+            });
+        }
+        const whereParts = ['is_active = 1'];
+        const queryParams = [];
+        // Filtering
+        const { category, is_new, search } = req.query;
+        if (category) {
+            whereParts.push('category = ?');
+            queryParams.push(category);
+        }
+        if (is_new === '1' || is_new === 'true') {
+            whereParts.push('is_new = 1');
+        }
+        if (search) {
+            whereParts.push('(title LIKE ? OR reference LIKE ? OR category LIKE ? OR short_description LIKE ?)');
+            const searchTerm = `%${search}%`;
+            queryParams.push(searchTerm, searchTerm, searchTerm, searchTerm);
+        }
+        const whereClause = `WHERE ${whereParts.join(' AND ')}`;
+        // Pagination
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 12;
+        const offset = (page - 1) * limit;
+        // Count total products
+        const [totalRows] = await connection.execute(`SELECT COUNT(*) as count FROM products ${whereClause}`, queryParams);
+        const totalProducts = totalRows[0].count;
+        const totalPages = Math.ceil(totalProducts / limit);
+        const listQuery = `SELECT id, title, slug, reference, category, short_description, image_url, images, is_new, featured FROM products ${whereClause} ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`;
+        const [rows] = await connection.execute(listQuery, queryParams);
+        // Normalize image_url with first images[].url when empty
+        const normalizedRows = rows.map((p) => {
+            let imagesArr = [];
+            try {
+                imagesArr = typeof p.images === 'string' ? JSON.parse(p.images) : (p.images || []);
+            }
+            catch {
+                imagesArr = [];
+            }
+            const firstWithUrl = Array.isArray(imagesArr) ? imagesArr.find((img) => img && img.url) : null;
+            const image_url = p.image_url || (firstWithUrl ? firstWithUrl.url : null);
+            return { ...p, images: imagesArr, image_url };
+        });
+        connection.release();
+        res.json({
+            data: normalizedRows,
+            pagination: {
+                totalProducts,
+                totalPages,
+                currentPage: page,
+                limit
+            }
+        });
+    }
+    catch (error) {
+        console.error('Erreur lors de la récupération des produits:', error);
+        res.status(500).json({
+            error: 'Erreur interne du serveur',
+            details: error instanceof Error ? error.message : 'Unknown error',
+            stack: error instanceof Error ? error.stack : undefined
+        });
+    }
+};
+export const getProductBySlugPublic = async (req, res) => {
+    try {
+        const { slug } = req.params;
+        const connection = await pool.getConnection();
+        // Vérifier si la table products existe
+        const [tableCheck] = await connection.execute("SHOW TABLES LIKE 'products'");
+        if (tableCheck.length === 0) {
+            connection.release();
+            return res.status(404).json({ error: 'Produit non trouvé' });
+        }
+        const [productRows] = await connection.execute('SELECT * FROM products WHERE slug = ?', [slug]);
+        if (productRows.length === 0) {
+            connection.release();
+            return res.status(404).json({ error: 'Produit non trouvé' });
+        }
+        const product = productRows[0];
+        // Parse JSON fields
+        const parseJsonField = (field) => {
+            if (typeof field === 'string') {
+                try {
+                    return JSON.parse(field);
+                }
+                catch (e) {
+                    return [];
+                }
+            }
+            return field || [];
+        };
+        const images = parseJsonField(product.images);
+        const specifications = parseJsonField(product.specifications);
+        const benefits = parseJsonField(product.benefits);
+        const downloads = parseJsonField(product.downloads);
+        const compatibility = parseJsonField(product.compatibility);
+        const related_products_ids = parseJsonField(product.related_products);
+        let relatedProductsData = [];
+        if (Array.isArray(related_products_ids) && related_products_ids.length > 0) {
+            const [relatedRows] = await connection.execute(`SELECT id, title, slug, reference, image_url, short_description FROM products WHERE id IN (${related_products_ids.map(() => '?').join(',')})`, related_products_ids);
+            relatedProductsData = relatedRows;
+        }
+        connection.release();
+        const completeProduct = {
+            ...product,
+            images,
+            specifications,
+            benefits,
+            downloads,
+            compatibility,
+            related_products: relatedProductsData
+        };
+        res.json(completeProduct);
+    }
+    catch (error) {
+        console.error('Erreur lors de la récupération du produit par slug:', error);
+        res.status(500).json({ error: 'Erreur interne du serveur' });
+    }
+};
+export const searchProductsPublic = async (req, res) => {
+    try {
+        const { q } = req.query;
+        if (!q) {
+            return res.status(400).json({ error: 'Paramètre de recherche "q" manquant' });
+        }
+        const connection = await pool.getConnection();
+        // Vérifier si la table products existe
+        const [tableCheck] = await connection.execute("SHOW TABLES LIKE 'products'");
+        if (tableCheck.length === 0) {
+            connection.release();
+            return res.json([]);
+        }
+        const searchTerm = `%${q}%`;
+        const [rows] = await connection.execute(`SELECT id, title, slug, reference, category, short_description, image_url, is_new, featured
+       FROM products
+       WHERE is_active = 1 AND (title LIKE ? OR reference LIKE ? OR category LIKE ? OR short_description LIKE ?)
+       ORDER BY created_at DESC`, [searchTerm, searchTerm, searchTerm, searchTerm]);
+        connection.release();
+        res.json(rows);
+    }
+    catch (error) {
+        console.error('Erreur lors de la recherche de produits:', error);
+        res.status(500).json({ error: 'Erreur interne du serveur' });
+    }
+};
+export const getRelatedProductsPublic = async (req, res) => {
+    try {
+        const { slug } = req.params;
+        const connection = await pool.getConnection();
+        // Vérifier si la table products existe
+        const [tableCheck] = await connection.execute("SHOW TABLES LIKE 'products'");
+        if (tableCheck.length === 0) {
+            connection.release();
+            return res.status(404).json({ error: 'Produit non trouvé' });
+        }
+        const [productRows] = await connection.execute('SELECT related_products FROM products WHERE slug = ?', [slug]);
+        if (productRows.length === 0) {
+            connection.release();
+            return res.status(404).json({ error: 'Produit non trouvé' });
+        }
+        const product = productRows[0];
+        const related_products_ids = JSON.parse(product.related_products || '[]');
+        let relatedProductsData = [];
+        if (Array.isArray(related_products_ids) && related_products_ids.length > 0) {
+            const [relatedRows] = await connection.execute(`SELECT id, title, slug, reference, image_url, short_description FROM products WHERE id IN (${related_products_ids.map(() => '?').join(',')})`, related_products_ids);
+            relatedProductsData = relatedRows;
+        }
+        connection.release();
+        res.json(relatedProductsData);
+    }
+    catch (error) {
+        console.error('Erreur lors de la récupération des produits associés:', error);
+        res.status(500).json({ error: 'Erreur interne du serveur' });
+    }
+};
+// Produits associés par slug
+export const getRelatedBySlug = async (req, res) => {
+    try {
+        const { slug } = req.params;
+        const connection = await pool.getConnection();
+        const [prodRows] = await connection.execute('SELECT id, related_products FROM products WHERE slug = ? LIMIT 1', [slug]);
+        if (prodRows.length === 0) {
+            connection.release();
+            return res.status(404).json({ error: 'Produit non trouvé' });
+        }
+        const product = prodRows[0];
+        let relatedIds = [];
+        if (product.related_products) {
+            try {
+                relatedIds = typeof product.related_products === 'string' ? JSON.parse(product.related_products) : product.related_products;
+            }
+            catch {
+                relatedIds = [];
+            }
+        }
+        if (!Array.isArray(relatedIds) || relatedIds.length === 0) {
+            connection.release();
+            return res.json([]);
+        }
+        const placeholders = relatedIds.map(() => '?').join(',');
+        const [rows] = await connection.execute(`SELECT id, title, slug, reference, category, short_description, image_url, is_new, featured
+       FROM products WHERE id IN (${placeholders})`, relatedIds);
+        connection.release();
+        res.json(rows);
+    }
+    catch (error) {
+        console.error('Erreur lors de la récupération des produits associés:', error);
+        res.status(500).json({ error: 'Erreur interne du serveur' });
+    }
+};
+// Nouvelle fonction pour récupérer un produit complet avec toutes ses données
+export const getProductComplete = async (req, res) => {
+    try {
+        const { slug } = req.params;
+        const connection = await pool.getConnection();
+        // Récupérer le produit principal
+        const [productRows] = await connection.execute('SELECT * FROM products WHERE slug = ?', [slug]);
+        if (productRows.length === 0) {
+            connection.release();
+            return res.status(404).json({ error: 'Produit non trouvé' });
+        }
+        const product = productRows[0];
+        const productId = product.id;
+        let specifications = [];
+        let downloads = [];
+        let relatedProducts = [];
+        try {
+            // Récupérer les spécifications depuis la table dédiée
+            const [specRows] = await connection.execute('SELECT paramètre, valeur FROM specifications WHERE product_id = ? ORDER BY id', [productId]);
+            specifications = specRows.map(spec => ({
+                label: spec.paramètre,
+                value: spec.valeur
+            }));
+        }
+        catch (specError) {
+            console.log('Table specifications non disponible, utilisation des données JSON');
+            // Fallback vers les données JSON dans la table products
+            if (product.specifications && typeof product.specifications === 'string') {
+                try {
+                    specifications = JSON.parse(product.specifications);
+                }
+                catch (parseError) {
+                    specifications = [];
+                }
+            }
+            else if (Array.isArray(product.specifications)) {
+                specifications = product.specifications;
+            }
+        }
+        try {
+            // Récupérer les téléchargements depuis la table dédiée
+            const [downloadRows] = await connection.execute('SELECT type, url FROM downloads WHERE product_id = ? ORDER BY id', [productId]);
+            downloads = downloadRows.map(download => ({
+                name: download.type,
+                type: 'PDF',
+                url: download.url,
+                size: 'N/A'
+            }));
+        }
+        catch (downloadError) {
+            console.log('Table downloads non disponible, utilisation des données JSON');
+            // Fallback vers les données JSON dans la table products
+            if (product.downloads && typeof product.downloads === 'string') {
+                try {
+                    downloads = JSON.parse(product.downloads);
+                }
+                catch (parseError) {
+                    downloads = [];
+                }
+            }
+            else if (Array.isArray(product.downloads)) {
+                downloads = product.downloads;
+            }
+        }
+        try {
+            // Récupérer les produits associés depuis la table dédiée
+            const [relatedRows] = await connection.execute(`SELECT p.id, p.title, p.slug, p.reference, p.image_url, p.short_description 
+         FROM related_products rp 
+         JOIN products p ON rp.related_id = p.id 
+         WHERE rp.product_id = ? 
+         ORDER BY rp.id`, [productId]);
+            relatedProducts = relatedRows;
+        }
+        catch (relatedError) {
+            console.log('Table related_products non disponible, utilisation des données JSON');
+            // Fallback vers les données JSON dans la table products
+            if (product.related_products && typeof product.related_products === 'string') {
+                try {
+                    const relatedIds = JSON.parse(product.related_products);
+                    if (Array.isArray(relatedIds) && relatedIds.length > 0) {
+                        const [relatedRows] = await connection.execute(`SELECT id, title, slug, reference, image_url, short_description 
+               FROM products 
+               WHERE id IN (${relatedIds.map(() => '?').join(',')})`, relatedIds);
+                        relatedProducts = relatedRows;
+                    }
+                }
+                catch (parseError) {
+                    relatedProducts = [];
+                }
+            }
+            else if (Array.isArray(product.related_products)) {
+                relatedProducts = product.related_products;
+            }
+        }
+        connection.release();
+        // Construire la réponse complète
+        const completeProduct = {
+            ...product,
+            specifications,
+            downloads,
+            related_products: relatedProducts
+        };
+        res.json(completeProduct);
+    }
+    catch (error) {
+        console.error('Erreur lors de la récupération du produit complet:', error);
+        res.status(500).json({ error: 'Erreur interne du serveur' });
+    }
+};
 export const createProduct = async (req, res) => {
     try {
         const product = req.body;
@@ -56,6 +508,7 @@ export const createProduct = async (req, res) => {
             slug: product.slug || '',
             reference: product.reference || '',
             category: product.category || '',
+            subcategory: product.subcategory || null,
             short_description: product.short_description || '',
             long_description: product.long_description || '',
             image_url: product.image_url || null,
@@ -67,6 +520,7 @@ export const createProduct = async (req, res) => {
             related_products: product.related_products || [],
             is_new: product.is_new || false,
             featured: product.featured || false,
+            is_active: product.is_active !== undefined ? !!product.is_active : true,
             meta_title: product.meta_title || null,
             meta_description: product.meta_description || null
         };
@@ -83,16 +537,16 @@ export const createProduct = async (req, res) => {
             counter++;
         }
         safeProduct.slug = finalSlug;
-        const [result] = await connection.execute(`INSERT INTO products (title, slug, reference, category, short_description, long_description, 
+        const [result] = await connection.execute(`INSERT INTO products (title, slug, reference, category, subcategory, short_description, long_description, 
        image_url, images, specifications, benefits, downloads, compatibility, related_products, 
-       is_new, featured, meta_title, meta_description) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
-            safeProduct.title, safeProduct.slug, safeProduct.reference, safeProduct.category,
+       is_new, featured, is_active, meta_title, meta_description) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+            safeProduct.title, safeProduct.slug, safeProduct.reference, safeProduct.category, safeProduct.subcategory,
             safeProduct.short_description, safeProduct.long_description, safeProduct.image_url,
             JSON.stringify(safeProduct.images), JSON.stringify(safeProduct.specifications),
             JSON.stringify(safeProduct.benefits), JSON.stringify(safeProduct.downloads),
             JSON.stringify(safeProduct.compatibility), JSON.stringify(safeProduct.related_products),
-            safeProduct.is_new, safeProduct.featured, safeProduct.meta_title, safeProduct.meta_description
+            safeProduct.is_new, safeProduct.featured, safeProduct.is_active, safeProduct.meta_title, safeProduct.meta_description
         ]);
         connection.release();
         res.status(201).json({ id: result.insertId, ...safeProduct });
@@ -113,6 +567,7 @@ export const updateProduct = async (req, res) => {
             slug: product.slug || '',
             reference: product.reference || '',
             category: product.category || '',
+            subcategory: product.subcategory || null,
             short_description: product.short_description || '',
             long_description: product.long_description || '',
             image_url: product.image_url || null,
@@ -124,6 +579,7 @@ export const updateProduct = async (req, res) => {
             related_products: product.related_products || [],
             is_new: product.is_new || false,
             featured: product.featured || false,
+            is_active: product.is_active !== undefined ? !!product.is_active : true,
             meta_title: product.meta_title || null,
             meta_description: product.meta_description || null
         };
@@ -144,17 +600,17 @@ export const updateProduct = async (req, res) => {
             }
             safeProduct.slug = finalSlug;
         }
-        await connection.execute(`UPDATE products SET title = ?, slug = ?, reference = ?, category = ?, 
+        await connection.execute(`UPDATE products SET title = ?, slug = ?, reference = ?, category = ?, subcategory = ?, 
        short_description = ?, long_description = ?, image_url = ?, images = ?, 
        specifications = ?, benefits = ?, downloads = ?, compatibility = ?, related_products = ?, 
-       is_new = ?, featured = ?, meta_title = ?, meta_description = ? 
+       is_new = ?, featured = ?, is_active = ?, meta_title = ?, meta_description = ? 
        WHERE id = ?`, [
-            safeProduct.title, safeProduct.slug, safeProduct.reference, safeProduct.category,
+            safeProduct.title, safeProduct.slug, safeProduct.reference, safeProduct.category, safeProduct.subcategory,
             safeProduct.short_description, safeProduct.long_description, safeProduct.image_url,
             JSON.stringify(safeProduct.images), JSON.stringify(safeProduct.specifications),
             JSON.stringify(safeProduct.benefits), JSON.stringify(safeProduct.downloads),
             JSON.stringify(safeProduct.compatibility), JSON.stringify(safeProduct.related_products),
-            safeProduct.is_new, safeProduct.featured, safeProduct.meta_title, safeProduct.meta_description, id
+            safeProduct.is_new, safeProduct.featured, safeProduct.is_active, safeProduct.meta_title, safeProduct.meta_description, id
         ]);
         connection.release();
         res.json({ id: parseInt(id), ...safeProduct });
@@ -174,6 +630,24 @@ export const deleteProduct = async (req, res) => {
     }
     catch (error) {
         console.error('Erreur lors de la suppression du produit:', error);
+        res.status(500).json({ error: 'Erreur interne du serveur' });
+    }
+};
+// Mettre à jour uniquement la visibilité publique (is_active)
+export const updateProductVisibility = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { is_active } = req.body || {};
+        if (typeof is_active !== 'boolean') {
+            return res.status(400).json({ error: 'Champ is_active manquant ou invalide' });
+        }
+        const connection = await pool.getConnection();
+        await connection.execute('UPDATE products SET is_active = ? WHERE id = ?', [is_active ? 1 : 0, id]);
+        connection.release();
+        res.json({ id: parseInt(id, 10), is_active });
+    }
+    catch (error) {
+        console.error('Erreur lors de la mise à jour de la visibilité:', error);
         res.status(500).json({ error: 'Erreur interne du serveur' });
     }
 };
@@ -394,4 +868,3 @@ export const getDashboardStats = async (req, res) => {
         res.status(500).json({ error: 'Erreur interne du serveur' });
     }
 };
-//# sourceMappingURL=admin.js.map

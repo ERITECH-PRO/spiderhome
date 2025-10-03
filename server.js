@@ -4,15 +4,21 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import multer from 'multer';
 import fs from 'fs';
-import { testConnection, initializeTables, createDefaultAdmin } from './dist/config/database.js';
+import { testConnection, initializeTables, createDefaultAdmin, pool } from './dist/config/database.js';
 import { authenticateUser, getClientIP } from './dist/utils/auth.js';
 import {
   requireAuth,
   getProducts,
+  getProductsPublic,
   getProduct,
+  getProductBySlug,
+  searchProducts,
+  getRelatedBySlug,
+  getProductComplete,
   createProduct,
   updateProduct,
   deleteProduct,
+  updateProductVisibility,
   getSlides,
   getSlideById,
   createSlide,
@@ -64,6 +70,31 @@ const upload = multer({
   }
 });
 
+// Configure multer for PDF uploads
+const pdfStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadsDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'pdf-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const uploadPdf = multer({
+  storage: pdfStorage,
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit for PDFs
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF files are allowed!'), false);
+    }
+  }
+});
+
 const app = express();
 const PORT = process.env.PORT || 3002;
 
@@ -72,6 +103,26 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'dist')));
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
+
+// Ensure categories table exists (without requiring a rebuild)
+async function ensureCategoriesTable() {
+  try {
+    const connection = await pool.getConnection();
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS categories (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(150) UNIQUE NOT NULL,
+        subcategories JSON,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    connection.release();
+    console.log('✅ Table categories prête');
+  } catch (error) {
+    console.error('❌ Erreur création table categories:', error);
+  }
+}
 
 // Routes API Admin
 app.post('/api/admin/login', async (req, res) => {
@@ -101,6 +152,94 @@ app.get('/api/admin/products/:id', getProduct);
 app.post('/api/admin/products', createProduct);
 app.put('/api/admin/products/:id', updateProduct);
 app.delete('/api/admin/products/:id', deleteProduct);
+app.patch('/api/admin/products/:id/visibility', updateProductVisibility);
+
+// Routes Categories (Admin)
+app.get('/api/admin/categories', async (req, res) => {
+  try {
+    const connection = await pool.getConnection();
+    const [rows] = await connection.execute('SELECT id, name, subcategories, created_at, updated_at FROM categories ORDER BY name ASC');
+    connection.release();
+    const normalized = (rows || []).map((c) => ({
+      ...c,
+      subcategories: typeof c.subcategories === 'string' ? (function(){try{return JSON.parse(c.subcategories)}catch{ return []}})() : (c.subcategories || [])
+    }));
+    res.json(normalized);
+  } catch (error) {
+    console.error('Erreur list categories:', error);
+    res.status(500).json({ error: 'Erreur interne du serveur' });
+  }
+});
+
+app.post('/api/admin/categories', async (req, res) => {
+  try {
+    const { name, subcategories } = req.body || {};
+    if (!name || !String(name).trim()) {
+      return res.status(400).json({ error: 'Le nom de la catégorie est requis' });
+    }
+    const connection = await pool.getConnection();
+    const [result] = await connection.execute(
+      'INSERT INTO categories (name, subcategories) VALUES (?, ?)',
+      [String(name).trim(), JSON.stringify(Array.isArray(subcategories) ? subcategories : [])]
+    );
+    connection.release();
+    res.status(201).json({ id: (result).insertId, name: String(name).trim(), subcategories: Array.isArray(subcategories) ? subcategories : [] });
+  } catch (error) {
+    console.error('Erreur création catégorie:', error);
+    res.status(500).json({ error: 'Erreur interne du serveur' });
+  }
+});
+
+app.put('/api/admin/categories/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, subcategories } = req.body || {};
+    if (!name || !String(name).trim()) {
+      return res.status(400).json({ error: 'Le nom de la catégorie est requis' });
+    }
+    const connection = await pool.getConnection();
+    await connection.execute(
+      'UPDATE categories SET name = ?, subcategories = ? WHERE id = ?',
+      [String(name).trim(), JSON.stringify(Array.isArray(subcategories) ? subcategories : []), id]
+    );
+    connection.release();
+    res.json({ id: Number(id), name: String(name).trim(), subcategories: Array.isArray(subcategories) ? subcategories : [] });
+  } catch (error) {
+    console.error('Erreur mise à jour catégorie:', error);
+    res.status(500).json({ error: 'Erreur interne du serveur' });
+  }
+});
+
+app.delete('/api/admin/categories/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const connection = await pool.getConnection();
+    await connection.execute('DELETE FROM categories WHERE id = ?', [id]);
+    connection.release();
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Erreur suppression catégorie:', error);
+    res.status(500).json({ error: 'Erreur interne du serveur' });
+  }
+});
+
+// Route publique (optionnelle) pour récupérer les catégories
+app.get('/api/categories', async (req, res) => {
+  try {
+    const connection = await pool.getConnection();
+    const [rows] = await connection.execute('SELECT id, name, subcategories FROM categories ORDER BY name ASC');
+    connection.release();
+    const normalized = (rows || []).map((c) => ({
+      id: c.id,
+      name: c.name,
+      subcategories: typeof c.subcategories === 'string' ? (function(){try{return JSON.parse(c.subcategories)}catch{ return []}})() : (c.subcategories || [])
+    }));
+    res.json(normalized);
+  } catch (error) {
+    console.error('Erreur publique categories:', error);
+    res.status(500).json({ error: 'Erreur interne du serveur' });
+  }
+});
 
 // Upload route for single image
 app.post('/api/admin/upload', upload.single('image'), (req, res) => {
@@ -109,7 +248,11 @@ app.post('/api/admin/upload', upload.single('image'), (req, res) => {
       return res.status(400).json({ error: 'No file uploaded' });
     }
     
-    const fileUrl = `/uploads/${req.file.filename}`;
+    // Get the full URL including protocol and host
+    const protocol = req.protocol;
+    const host = req.get('host');
+    const fileUrl = `${protocol}://${host}/uploads/${req.file.filename}`;
+    
     res.json({ 
       success: true, 
       url: fileUrl,
@@ -130,8 +273,12 @@ app.post('/api/admin/upload-multiple', upload.array('images', 10), (req, res) =>
       return res.status(400).json({ error: 'No files uploaded' });
     }
     
+    // Get the full URL including protocol and host
+    const protocol = req.protocol;
+    const host = req.get('host');
+    
     const uploadedFiles = req.files.map(file => ({
-      url: `/uploads/${file.filename}`,
+      url: `${protocol}://${host}/uploads/${file.filename}`,
       filename: file.filename,
       originalName: file.originalname,
       size: file.size
@@ -144,6 +291,31 @@ app.post('/api/admin/upload-multiple', upload.array('images', 10), (req, res) =>
   } catch (error) {
     console.error('Upload error:', error);
     res.status(500).json({ error: 'Upload failed' });
+  }
+});
+
+// Upload route for PDF files
+app.post('/api/admin/upload-pdf', uploadPdf.single('file'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No PDF file uploaded' });
+    }
+    
+    // Get the full URL including protocol and host
+    const protocol = req.protocol;
+    const host = req.get('host');
+    const fileUrl = `${protocol}://${host}/uploads/${req.file.filename}`;
+    
+    res.json({ 
+      success: true, 
+      url: fileUrl,
+      filename: req.file.filename,
+      originalName: req.file.originalname,
+      size: req.file.size
+    });
+  } catch (error) {
+    console.error('PDF Upload error:', error);
+    res.status(500).json({ error: 'PDF upload failed' });
   }
 });
 
@@ -173,9 +345,45 @@ app.get('/api/admin/dashboard/stats', getDashboardStats);
 // Routes publiques pour le site vitrine
 app.get('/api/products', async (req, res) => {
   try {
-    await getProducts(req, res);
+    await getProductsPublic(req, res);
   } catch (error) {
     res.status(500).json({ error: 'Erreur lors de la récupération des produits' });
+  }
+});
+
+// Recherche de produits
+app.get('/api/products/search', async (req, res) => {
+  try {
+    await searchProducts(req, res);
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur lors de la recherche des produits' });
+  }
+});
+
+// Produit complet par slug (parsing JSON inclus)
+app.get('/api/products/slug/:slug', async (req, res) => {
+  try {
+    await getProductComplete(req, res);
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur lors de la récupération du produit' });
+  }
+});
+
+// Produit par slug (lecture directe table products)
+app.get('/api/products/:slug', async (req, res) => {
+  try {
+    await getProductBySlug(req, res);
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur lors de la récupération du produit' });
+  }
+});
+
+// Produits associés
+app.get('/api/products/:slug/related', async (req, res) => {
+  try {
+    await getRelatedBySlug(req, res);
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur lors de la récupération des produits associés' });
   }
 });
 
@@ -238,6 +446,7 @@ async function initializeDatabase() {
 // Démarrage du serveur
 async function startServer() {
   await initializeDatabase();
+  await ensureCategoriesTable();
   
   app.listen(PORT, () => {
     console.log(`🚀 Serveur démarré sur le port ${PORT}`);

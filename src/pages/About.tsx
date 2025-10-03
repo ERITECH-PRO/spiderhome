@@ -86,9 +86,6 @@ const About = () => {
       <section className="bg-gradient-to-br from-[#0B0C10] to-[#118AB2] text-white py-20">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-4xl mx-auto">
-            <h1 className="text-5xl font-bold mb-6">
-              À propos de SpiderHome
-            </h1>
             <p className="text-xl mb-8 text-gray-200">
               Nous sommes une équipe passionnée qui croit que la technologie peut simplifier 
               la vie de chacun tout en respectant l'environnement.

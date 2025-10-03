@@ -98,9 +98,6 @@ const Blog = () => {
       <section className="bg-gradient-to-br from-[#0B0C10] to-[#118AB2] text-white py-20">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-4xl mx-auto">
-            <h1 className="text-5xl font-bold mb-6">
-              Blog & Astuces Domotique
-            </h1>
             <p className="text-xl mb-8 text-gray-200">
               Guides pratiques, conseils d'experts et actualités pour optimiser 
               votre maison connectée avec SpiderHome.

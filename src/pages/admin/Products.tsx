@@ -9,10 +9,11 @@ interface Product {
   id: number;
   title: string;
   reference: string;
-  description: string;
+  short_description: string;
   image_url?: string;
   images?: ProductImage[];
   category: string;
+  is_active?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -62,7 +63,8 @@ const Products = () => {
 
       if (response.ok) {
         const data = await response.json();
-        setProducts(data);
+        const list = (data && typeof data === 'object' && 'data' in data) ? (data as any).data : data;
+        setProducts(Array.isArray(list) ? list : []);
       }
     } catch (error) {
       console.error('Erreur lors de la récupération des produits:', error);
@@ -102,13 +104,16 @@ const Products = () => {
     fetchProducts();
   };
 
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  const filteredProducts = Array.isArray(products)
+    ? products.filter((product) => {
+        const shortDesc = (product as any).short_description || '';
+        const matchesSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                              product.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                              shortDesc.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
+        return matchesSearch && matchesCategory;
+      })
+    : [];
 
   if (loading) {
     return (
@@ -313,6 +318,35 @@ const Products = () => {
                     <Calendar className="h-3 w-3" />
                     <span>{new Date(product.created_at).toLocaleDateString('fr-FR')}</span>
                   </div>
+                </div>
+
+                {/* Toggle visibilité publique */}
+                <div className="flex items-center justify-between mb-4">
+                  <span className={`text-xs ${isDark ? 'text-theme-secondary' : 'text-gray-600'}`}>Visibilité publique</span>
+                  <label className="inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={!!(product as any).is_active}
+                      onChange={async (e) => {
+                        const next = e.target.checked;
+                        try {
+                          const token = localStorage.getItem('admin_token');
+                          const res = await fetch(`/api/admin/products/${product.id}/visibility`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                            body: JSON.stringify({ is_active: next })
+                          });
+                          if (res.ok) {
+                            setProducts((prev) => prev.map(p => p.id === product.id ? { ...(p as any), is_active: next } : p));
+                          }
+                        } catch {}
+                      }}
+                    />
+                    <span className="w-10 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:bg-green-500 transition-colors relative">
+                      <span className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5" />
+                    </span>
+                  </label>
                 </div>
                 
                 {/* Bottom Actions */}
