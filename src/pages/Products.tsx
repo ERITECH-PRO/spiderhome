@@ -47,19 +47,45 @@ const Products = () => {
   const [viewMode] = useState<'grid'>('grid');
   const [showFilters, setShowFilters] = useState(false);
 
-  // Récupérer les produits depuis l'API
+  // Récupérer les produits depuis l'API avec cache
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/products');
+        
+        // Vérifier le cache local d'abord
+        const cacheKey = 'products_cache';
+        const cachedData = localStorage.getItem(cacheKey);
+        const cacheTimestamp = localStorage.getItem(`${cacheKey}_timestamp`);
+        const now = Date.now();
+        const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+        
+        if (cachedData && cacheTimestamp && (now - parseInt(cacheTimestamp)) < CACHE_DURATION) {
+          const responseData = JSON.parse(cachedData);
+          const productsData = responseData.data || responseData;
+          setProducts(Array.isArray(productsData) ? productsData : []);
+          setLoading(false);
+          return;
+        }
+        
+        const response = await fetch('/api/products', {
+          headers: {
+            'Cache-Control': 'max-age=300' // 5 minutes
+          }
+        });
+        
         if (!response.ok) {
           throw new Error('Erreur lors du chargement des produits');
         }
+        
         const responseData = await response.json();
-        // Gérer la nouvelle structure { data, pagination } ou l'ancienne structure (tableau direct)
         const productsData = responseData.data || responseData;
         setProducts(Array.isArray(productsData) ? productsData : []);
+        
+        // Mettre en cache
+        localStorage.setItem(cacheKey, JSON.stringify(responseData));
+        localStorage.setItem(`${cacheKey}_timestamp`, now.toString());
+        
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Erreur inconnue');
       } finally {

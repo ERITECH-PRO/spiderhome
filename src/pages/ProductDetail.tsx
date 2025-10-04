@@ -85,10 +85,33 @@ const ProductDetail = () => {
       if (slug) {
         try {
           setLoading(true);
-          const response = await fetch(`/api/products/${slug}`);
+          
+          // Vérifier le cache local d'abord
+          const cacheKey = `product_${slug}`;
+          const cachedData = localStorage.getItem(cacheKey);
+          const cacheTimestamp = localStorage.getItem(`${cacheKey}_timestamp`);
+          const now = Date.now();
+          const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes pour les détails produit
+          
+          if (cachedData && cacheTimestamp && (now - parseInt(cacheTimestamp)) < CACHE_DURATION) {
+            setProduct(JSON.parse(cachedData));
+            setLoading(false);
+            return;
+          }
+          
+          const response = await fetch(`/api/products/${slug}`, {
+            headers: {
+              'Cache-Control': 'max-age=600' // 10 minutes
+            }
+          });
+          
           if (response.ok) {
             const productData = await response.json();
             setProduct(productData);
+            
+            // Mettre en cache
+            localStorage.setItem(cacheKey, JSON.stringify(productData));
+            localStorage.setItem(`${cacheKey}_timestamp`, now.toString());
           } else {
             setProduct(null);
           }
