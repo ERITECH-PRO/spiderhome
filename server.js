@@ -100,9 +100,52 @@ const PORT = process.env.PORT || 3003;
 
 // Middleware
 app.use(cors());
-app.use(express.json());
-app.use(express.static(path.join(__dirname, 'dist')));
-app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Cache headers pour les assets statiques
+app.use(express.static(path.join(__dirname, 'dist'), {
+  maxAge: '1y', // Cache 1 an pour les assets
+  etag: true,
+  lastModified: true
+}));
+
+// Cache headers pour les uploads
+app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads'), {
+  maxAge: '30d', // Cache 30 jours pour les images
+  etag: true,
+  lastModified: true
+}));
+
+// Cache simple en mémoire
+const cache = new Map();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+function getCached(key) {
+  const cached = cache.get(key);
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    return cached.data;
+  }
+  cache.delete(key);
+  return null;
+}
+
+function setCache(key, data) {
+  cache.set(key, {
+    data,
+    timestamp: Date.now()
+  });
+}
+
+// Nettoyer le cache périodiquement
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, value] of cache.entries()) {
+    if (now - value.timestamp > CACHE_DURATION) {
+      cache.delete(key);
+    }
+  }
+}, CACHE_DURATION);
 
 // Ensure categories table exists (without requiring a rebuild)
 async function ensureCategoriesTable() {
@@ -348,6 +391,21 @@ app.get('/api/admin/dashboard/stats', getDashboardStats);
 // Routes publiques pour le site vitrine
 app.get('/api/products', async (req, res) => {
   try {
+    // Cache key basé sur les paramètres de requête
+    const cacheKey = `products_${JSON.stringify(req.query)}`;
+    const cached = getCached(cacheKey);
+    
+    if (cached) {
+      return res.json(cached);
+    }
+    
+    // Si pas en cache, exécuter la requête
+    const originalSend = res.json;
+    res.json = function(data) {
+      setCache(cacheKey, data);
+      return originalSend.call(this, data);
+    };
+    
     await getProductsPublic(req, res);
   } catch (error) {
     res.status(500).json({ error: 'Erreur lors de la récupération des produits' });
@@ -375,6 +433,19 @@ app.get('/api/products/slug/:slug', async (req, res) => {
 // Produit par slug (lecture directe table products)
 app.get('/api/products/:slug', async (req, res) => {
   try {
+    const cacheKey = `product_${req.params.slug}`;
+    const cached = getCached(cacheKey);
+    
+    if (cached) {
+      return res.json(cached);
+    }
+    
+    const originalSend = res.json;
+    res.json = function(data) {
+      setCache(cacheKey, data);
+      return originalSend.call(this, data);
+    };
+    
     await getProductBySlug(req, res);
   } catch (error) {
     res.status(500).json({ error: 'Erreur lors de la récupération du produit' });

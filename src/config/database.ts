@@ -7,8 +7,12 @@ const dbConfig = {
   password: process.env.DB_PASSWORD || 'StrongPass123',
   database: process.env.DB_NAME || 'sp_base',
   waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
+  connectionLimit: 20, // Augmenté de 10 à 20
+  queueLimit: 0,
+  acquireTimeout: 60000, // 60 secondes
+  timeout: 60000, // 60 secondes
+  reconnect: true,
+  charset: 'utf8mb4'
 };
 
 // Créer le pool de connexions
