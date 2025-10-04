@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 
 // https://vitejs.dev/config/
 export default defineConfig(() => {
-  const target = process.env.VITE_PROXY_TARGET || 'http://localhost:3002';
+  const target = process.env.VITE_PROXY_TARGET || 'http://185.183.35.80:3003';
   return {
     plugins: [react()],
     optimizeDeps: {

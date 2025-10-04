@@ -1,7 +1,10 @@
 // Configuration de l'application
 export const config = {
     // URL du serveur backend
-    serverUrl: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SERVER_URL) || process.env.VITE_SERVER_URL || 'http://185.183.35.80:3003',
+    serverUrl: (typeof import.meta !== 'undefined' && (import.meta.env?.VITE_SERVER_URL || import.meta.env?.VITE_PROXY_TARGET))
+        || process.env.VITE_SERVER_URL
+        || process.env.VITE_PROXY_TARGET
+        || 'http://185.183.35.80:3003',
     // Configuration de l'application
     appName: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_APP_NAME) || process.env.VITE_APP_NAME || 'SpiderHome',
     appVersion: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_APP_VERSION) || process.env.VITE_APP_VERSION || '1.0.0',
