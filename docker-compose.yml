@@ -1,4 +1,5 @@
 version: "3.9"
+
 services:
   backend:
     build:
@@ -13,6 +14,7 @@ services:
       - DB_PASSWORD=StrongPass123
       - DB_NAME=sp_base
       - NODE_ENV=production
+      - SERVER_URL=http://185.183.35.80:3003
     ports:
       - "3003:3003"
     restart: unless-stopped
@@ -20,12 +22,14 @@ services:
   frontend:
     build:
       context: .
-      dockerfile: Dockerfile.frontend
+      dockerfile: Dockerfile.frontend.prod
     container_name: spiderhome_frontend
-    environment:
-      - VITE_PROXY_TARGET=http://185.183.35.80:3003
-    depends_on:
-      - backend
     ports:
       - "5175:5175"
     restart: unless-stopped
+    depends_on:
+      - backend
+
+networks:
+  default:
+    driver: bridge
