@@ -412,6 +412,44 @@ app.get('/api/products', async (req, res) => {
   }
 });
 
+// Endpoint optimisé pour la page d'accueil (utilise le cache de préchargement)
+app.get('/api/products/homepage', async (req, res) => {
+  try {
+    // Si on a des données préchargées et qu'elles sont récentes (< 5 minutes)
+    if (preloadCache.products && preloadCache.lastUpdate && 
+        (Date.now() - preloadCache.lastUpdate) < 5 * 60 * 1000) {
+      
+      const normalizedProducts = preloadCache.products.map((p) => {
+        let images = [];
+        try {
+          images = typeof p.images === 'string' ? JSON.parse(p.images) : (p.images || []);
+        } catch {
+          images = [];
+        }
+        const firstWithUrl = Array.isArray(images) ? images.find((img) => img && img.url) : null;
+        const image_url = p.image_url || (firstWithUrl ? firstWithUrl.url : null);
+        return { ...p, images, image_url };
+      });
+      
+      return res.json({
+        data: normalizedProducts,
+        pagination: {
+          totalProducts: normalizedProducts.length,
+          totalPages: 1,
+          currentPage: 1,
+          limit: 12
+        },
+        cached: true
+      });
+    }
+    
+    // Sinon, utiliser la route normale
+    await getProductsPublic(req, res);
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur lors de la récupération des produits' });
+  }
+});
+
 // Recherche de produits
 app.get('/api/products/search', async (req, res) => {
   try {
@@ -463,6 +501,12 @@ app.get('/api/products/:slug/related', async (req, res) => {
 
 app.get('/api/slides', async (req, res) => {
   try {
+    // Utiliser le cache de préchargement si disponible
+    if (preloadCache.slides && preloadCache.lastUpdate && 
+        (Date.now() - preloadCache.lastUpdate) < 5 * 60 * 1000) {
+      return res.json(preloadCache.slides);
+    }
+    
     await getSlides(req, res);
   } catch (error) {
     res.status(500).json({ error: 'Erreur lors de la récupération des slides' });
@@ -471,9 +515,43 @@ app.get('/api/slides', async (req, res) => {
 
 app.get('/api/features', async (req, res) => {
   try {
+    // Utiliser le cache de préchargement si disponible
+    if (preloadCache.features && preloadCache.lastUpdate && 
+        (Date.now() - preloadCache.lastUpdate) < 5 * 60 * 1000) {
+      return res.json(preloadCache.features);
+    }
+    
     await getFeatures(req, res);
   } catch (error) {
     res.status(500).json({ error: 'Erreur lors de la récupération des fonctionnalités' });
+  }
+});
+
+// Endpoint de santé pour l'hébergement
+app.get('/health', async (req, res) => {
+  try {
+    const connection = await pool.getConnection();
+    await connection.execute('SELECT 1');
+    connection.release();
+    
+    res.json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      memory: process.memoryUsage(),
+      cache: {
+        products: preloadCache.products ? preloadCache.products.length : 0,
+        slides: preloadCache.slides ? preloadCache.slides.length : 0,
+        features: preloadCache.features ? preloadCache.features.length : 0,
+        lastUpdate: preloadCache.lastUpdate
+      }
+    });
+  } catch (error) {
+    res.status(503).json({
+      status: 'unhealthy',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
   }
 });
 
@@ -491,7 +569,83 @@ app.use((req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
-// Initialisation de la base de données
+// Cache de préchargement pour éviter les cold starts
+let preloadCache = {
+  products: null,
+  slides: null,
+  features: null,
+  categories: null,
+  lastUpdate: null
+};
+
+// Fonction de préchargement des données critiques
+async function preloadCriticalData() {
+  try {
+    console.log('🔄 Préchargement des données critiques...');
+    const connection = await pool.getConnection();
+    
+    // Précharger les produits actifs (pour la page d'accueil)
+    try {
+      const [products] = await connection.execute(`
+        SELECT id, title, slug, reference, category, short_description, image_url, images, is_new, featured 
+        FROM products 
+        WHERE is_active = 1 
+        ORDER BY created_at DESC 
+        LIMIT 12
+      `);
+      preloadCache.products = products;
+      console.log(`✅ ${products.length} produits préchargés`);
+    } catch (error) {
+      console.warn('⚠️ Impossible de précharger les produits:', error.message);
+    }
+    
+    // Précharger les slides actifs
+    try {
+      const [slides] = await connection.execute(`
+        SELECT * FROM slides 
+        WHERE is_active = 1 
+        ORDER BY order_index ASC
+      `);
+      preloadCache.slides = slides;
+      console.log(`✅ ${slides.length} slides préchargés`);
+    } catch (error) {
+      console.warn('⚠️ Impossible de précharger les slides:', error.message);
+    }
+    
+    // Précharger les features actives
+    try {
+      const [features] = await connection.execute(`
+        SELECT * FROM features 
+        WHERE is_active = 1 
+        ORDER BY order_index ASC
+      `);
+      preloadCache.features = features;
+      console.log(`✅ ${features.length} features préchargées`);
+    } catch (error) {
+      console.warn('⚠️ Impossible de précharger les features:', error.message);
+    }
+    
+    // Précharger les catégories
+    try {
+      const [categories] = await connection.execute(`
+        SELECT id, name, subcategories FROM categories 
+        ORDER BY name ASC
+      `);
+      preloadCache.categories = categories;
+      console.log(`✅ ${categories.length} catégories préchargées`);
+    } catch (error) {
+      console.warn('⚠️ Impossible de précharger les catégories:', error.message);
+    }
+    
+    preloadCache.lastUpdate = Date.now();
+    connection.release();
+    console.log('✅ Préchargement terminé');
+  } catch (error) {
+    console.error('❌ Erreur lors du préchargement:', error);
+  }
+}
+
+// Initialisation de la base de données (optimisée)
 async function initializeDatabase() {
   console.log('🔄 Initialisation de la base de données...');
   
@@ -515,6 +669,9 @@ async function initializeDatabase() {
   }
   
   console.log('✅ Base de données initialisée avec succès');
+  
+  // Précharger les données critiques en arrière-plan
+  setImmediate(() => preloadCriticalData());
 }
 
 // Démarrage du serveur
@@ -527,6 +684,18 @@ async function startServer() {
     console.log(`📱 Site vitrine: http://localhost:${PORT}`);
     console.log(`🔐 Administration: http://localhost:${PORT}/admin`);
     console.log(`👤 Admin: admin_spiderhome / Industrial2024`);
+    console.log(`🏥 Health check: http://localhost:${PORT}/health`);
+    
+    // Warm-up automatique après 2 secondes
+    setTimeout(async () => {
+      try {
+        console.log('🔥 Démarrage du warm-up automatique...');
+        const warmup = await import('./warmup-server.js');
+        await warmup.default();
+      } catch (error) {
+        console.warn('⚠️ Warm-up automatique échoué:', error.message);
+      }
+    }, 2000);
   });
 }
 
