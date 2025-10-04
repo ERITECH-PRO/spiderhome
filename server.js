@@ -4,8 +4,6 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import multer from 'multer';
 import fs from 'fs';
-import compression from 'compression';
-import sharp from 'sharp';
 import { testConnection, initializeTables, createDefaultAdmin, pool } from './dist/config/database.js';
 import { authenticateUser, getClientIP } from './dist/utils/auth.js';
 import {
@@ -45,19 +43,6 @@ const __dirname = path.dirname(__filename);
 const uploadsDir = path.join(__dirname, 'public', 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-// Fonction pour optimiser les images (version simplifiée sans Sharp)
-async function optimizeImage(inputPath, outputPath) {
-  try {
-    // Pour l'instant, on copie simplement le fichier sans optimisation
-    // L'optimisation sera ajoutée plus tard quand Sharp sera correctement configuré
-    fs.copyFileSync(inputPath, outputPath);
-    return true;
-  } catch (error) {
-    console.error('Erreur optimisation image:', error);
-    return false;
-  }
 }
 
 // Configure multer for file uploads
@@ -114,54 +99,10 @@ const app = express();
 const PORT = process.env.PORT || 3003;
 
 // Middleware
-app.use(compression()); // Compression gzip
 app.use(cors());
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Cache headers pour les assets statiques
-app.use(express.static(path.join(__dirname, 'dist'), {
-  maxAge: '1y', // Cache 1 an pour les assets
-  etag: true,
-  lastModified: true
-}));
-
-// Cache headers pour les uploads
-app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads'), {
-  maxAge: '30d', // Cache 30 jours pour les images
-  etag: true,
-  lastModified: true
-}));
-
-// Cache simple en mémoire
-const cache = new Map();
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-
-function getCached(key) {
-  const cached = cache.get(key);
-  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-    return cached.data;
-  }
-  cache.delete(key);
-  return null;
-}
-
-function setCache(key, data) {
-  cache.set(key, {
-    data,
-    timestamp: Date.now()
-  });
-}
-
-// Nettoyer le cache périodiquement
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, value] of cache.entries()) {
-    if (now - value.timestamp > CACHE_DURATION) {
-      cache.delete(key);
-    }
-  }
-}, CACHE_DURATION);
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'dist')));
+app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 
 // Ensure categories table exists (without requiring a rebuild)
 async function ensureCategoriesTable() {
@@ -301,33 +242,24 @@ app.get('/api/categories', async (req, res) => {
 });
 
 // Upload route for single image
-app.post('/api/admin/upload', upload.single('image'), async (req, res) => {
+app.post('/api/admin/upload', upload.single('image'), (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
     
-    const inputPath = req.file.path;
-    const optimizedFilename = req.file.filename.replace(/\.[^/.]+$/, '_optimized.jpg');
-    const outputPath = path.join(uploadsDir, optimizedFilename);
-    
-    // Optimiser l'image
-    const optimized = await optimizeImage(inputPath, outputPath);
-    const finalFilename = optimized ? optimizedFilename : req.file.filename;
-    
     // Get the full URL including protocol and host
     const protocol = req.protocol;
     const host = process.env.DB_HOST || req.get('host');
     const port = process.env.PORT || '3003';
-    const fileUrl = `${protocol}://${host}:${port}/uploads/${finalFilename}`;
+    const fileUrl = `${protocol}://${host}:${port}/uploads/${req.file.filename}`;
     
     res.json({ 
       success: true, 
       url: fileUrl,
-      filename: finalFilename,
+      filename: req.file.filename,
       originalName: req.file.originalname,
-      size: optimized ? fs.statSync(outputPath).size : req.file.size,
-      optimized: optimized
+      size: req.file.size
     });
   } catch (error) {
     console.error('Upload error:', error);
@@ -336,7 +268,7 @@ app.post('/api/admin/upload', upload.single('image'), async (req, res) => {
 });
 
 // Upload route for multiple images
-app.post('/api/admin/upload-multiple', upload.array('images', 10), async (req, res) => {
+app.post('/api/admin/upload-multiple', upload.array('images', 10), (req, res) => {
   try {
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ error: 'No files uploaded' });
@@ -347,25 +279,12 @@ app.post('/api/admin/upload-multiple', upload.array('images', 10), async (req, r
     const host = process.env.DB_HOST || req.get('host');
     const port = process.env.PORT || '3003';
     
-    const uploadedFiles = await Promise.all(
-      req.files.map(async (file) => {
-        const inputPath = file.path;
-        const optimizedFilename = file.filename.replace(/\.[^/.]+$/, '_optimized.jpg');
-        const outputPath = path.join(uploadsDir, optimizedFilename);
-        
-        // Optimiser l'image
-        const optimized = await optimizeImage(inputPath, outputPath);
-        const finalFilename = optimized ? optimizedFilename : file.filename;
-        
-        return {
-          url: `${protocol}://${host}:${port}/uploads/${finalFilename}`,
-          filename: finalFilename,
-          originalName: file.originalname,
-          size: optimized ? fs.statSync(outputPath).size : file.size,
-          optimized: optimized
-        };
-      })
-    );
+    const uploadedFiles = req.files.map(file => ({
+      url: `${protocol}://${host}:${port}/uploads/${file.filename}`,
+      filename: file.filename,
+      originalName: file.originalname,
+      size: file.size
+    }));
     
     res.json({ 
       success: true, 
@@ -429,21 +348,6 @@ app.get('/api/admin/dashboard/stats', getDashboardStats);
 // Routes publiques pour le site vitrine
 app.get('/api/products', async (req, res) => {
   try {
-    // Cache key basé sur les paramètres de requête
-    const cacheKey = `products_${JSON.stringify(req.query)}`;
-    const cached = getCached(cacheKey);
-    
-    if (cached) {
-      return res.json(cached);
-    }
-    
-    // Si pas en cache, exécuter la requête
-    const originalSend = res.json;
-    res.json = function(data) {
-      setCache(cacheKey, data);
-      return originalSend.call(this, data);
-    };
-    
     await getProductsPublic(req, res);
   } catch (error) {
     res.status(500).json({ error: 'Erreur lors de la récupération des produits' });
@@ -471,19 +375,6 @@ app.get('/api/products/slug/:slug', async (req, res) => {
 // Produit par slug (lecture directe table products)
 app.get('/api/products/:slug', async (req, res) => {
   try {
-    const cacheKey = `product_${req.params.slug}`;
-    const cached = getCached(cacheKey);
-    
-    if (cached) {
-      return res.json(cached);
-    }
-    
-    const originalSend = res.json;
-    res.json = function(data) {
-      setCache(cacheKey, data);
-      return originalSend.call(this, data);
-    };
-    
     await getProductBySlug(req, res);
   } catch (error) {
     res.status(500).json({ error: 'Erreur lors de la récupération du produit' });
