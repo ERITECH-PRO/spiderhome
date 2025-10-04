@@ -47,32 +47,12 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Fonction pour optimiser les images
-async function optimizeImage(inputPath: string, outputPath: string) {
+// Fonction pour optimiser les images (version simplifiée sans Sharp)
+async function optimizeImage(inputPath, outputPath) {
   try {
-    await sharp(inputPath)
-      .resize(1200, 1200, { 
-        fit: 'inside', 
-        withoutEnlargement: true 
-      })
-      .jpeg({ 
-        quality: 85, 
-        progressive: true 
-      })
-      .png({ 
-        quality: 85, 
-        progressive: true 
-      })
-      .webp({ 
-        quality: 85 
-      })
-      .toFile(outputPath);
-    
-    // Supprimer l'original si l'optimisation a réussi
-    if (fs.existsSync(inputPath) && inputPath !== outputPath) {
-      fs.unlinkSync(inputPath);
-    }
-    
+    // Pour l'instant, on copie simplement le fichier sans optimisation
+    // L'optimisation sera ajoutée plus tard quand Sharp sera correctement configuré
+    fs.copyFileSync(inputPath, outputPath);
     return true;
   } catch (error) {
     console.error('Erreur optimisation image:', error);
@@ -157,7 +137,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads'), {
 const cache = new Map();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-function getCached(key: string) {
+function getCached(key) {
   const cached = cache.get(key);
   if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
     return cached.data;
@@ -166,7 +146,7 @@ function getCached(key: string) {
   return null;
 }
 
-function setCache(key: string, data: any) {
+function setCache(key, data) {
   cache.set(key, {
     data,
     timestamp: Date.now()
