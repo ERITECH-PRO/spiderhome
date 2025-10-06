@@ -56,6 +56,9 @@ jobs:
               exit 1
             fi
 
+            echo "🧹 Nettoyage Docker (images et containers inutilisés)"
+            docker system prune -af || true
+
             echo "✅ Déploiement SpiderHome OK"
 
       - name: Telegram success
