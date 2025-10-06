@@ -1,0 +1,67 @@
+name: Deploy-SPIDERHOME
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  prod:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy over SSH
+        id: deploy
+        uses: appleboy/ssh-action@v1
+        with:
+          host:     ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key:      ${{ secrets.SSH_KEY }}
+          script: |
+            set -euxo pipefail
+            cd /opt/SPIDERHOME/spiderhome
+
+            echo "🔁 Forcer le remote Git en SSH"
+            git remote set-url origin git@github.com:Erikson22/SpiderHome.git || true
+
+            echo "🔄 Hard reset sur origin/main"
+            git fetch --prune --quiet
+            git reset --hard origin/main
+            git clean -fdx
+
+            echo "⏩ Déploiement commit $(git rev-parse --short HEAD)"
+            docker compose build --no-cache --pull
+            docker compose up -d --force-recreate
+
+            echo "🩺 Vérification health endpoints"
+            curl -f http://localhost:3003/health || (echo "❌ backend KO" && exit 1)
+            curl -f http://localhost:5175/health || (echo "❌ frontend KO" && exit 1)
+            echo "✅ Déploiement SpiderHome OK"
+
+      - name: Telegram success
+        if: success()
+        uses: appleboy/telegram-action@v0.1.0
+        with:
+          to: ${{ secrets.TG_CHAT_ID }}
+          token: ${{ secrets.TG_TOKEN }}
+          format: html
+          disable_web_page_preview: true
+          message: |
+            <b>🟢 Déploiement SpiderHome réussi</b>
+            <b>SHA :</b> <code>${{ github.sha }}</code>
+            <b>Auteur :</b> <code>${{ github.actor }}</code>
+            <a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}">Voir logs ↗︎</a>
+
+      - name: Telegram failure
+        if: failure()
+        uses: appleboy/telegram-action@v0.1.0
+        with:
+          to: ${{ secrets.TG_CHAT_ID }}
+          token: ${{ secrets.TG_TOKEN }}
+          format: html
+          disable_web_page_preview: true
+          message: |
+            <b>🔴 Échec du déploiement SpiderHome</b>
+            <b>SHA :</b> <code>${{ github.sha }}</code>
+            <a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}">Logs ↗︎</a>
