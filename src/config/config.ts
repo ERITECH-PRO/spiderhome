@@ -30,9 +30,16 @@ export const getServerUrl = (path: string = '') => {
 
 // Fonction utilitaire pour l'URL des images
 export const getImageUrl = (imagePath: string) => {
-  if (!imagePath) return '/placeholder-product.jpg';
+  if (!imagePath) return '/LOGO SPIDERHOME SANS FONT@1080x.png';
   // Already absolute URL
   if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    // Si c'est une URL absolue pointant vers /uploads, renvoyer un chemin relatif pour éviter le mixed content
+    try {
+      const url = new URL(imagePath);
+      if (url.pathname.startsWith('/uploads/')) {
+        return url.pathname; // laisser Nginx proxyer /uploads vers le backend
+      }
+    } catch {}
     return imagePath;
   }
 
@@ -64,5 +71,6 @@ export const getImageUrl = (imagePath: string) => {
     }
   }
 
-  return getServerUrl(normalized);
+  // Pour éviter le mixed content, retourner un chemin relatif sous /uploads
+  return normalized;
 };
