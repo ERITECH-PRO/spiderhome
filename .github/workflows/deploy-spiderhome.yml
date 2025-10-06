@@ -34,9 +34,28 @@ jobs:
             docker compose build --no-cache --pull
             docker compose up -d --force-recreate
 
-            echo "🩺 Vérification health endpoints"
-            curl -f http://localhost:3003/health || (echo "❌ backend KO" && exit 1)
-            curl -f http://localhost:5175/health || (echo "❌ frontend KO" && exit 1)
+            echo "🩺 Vérification health endpoints (attente du backend)"
+            for i in {1..10}; do
+              if curl -fs http://localhost:3003/health >/dev/null; then
+                echo "✅ Backend OK"
+                break
+              fi
+              echo "⏳ Attente backend ($i/10)..."
+              sleep 5
+              if [ $i -eq 10 ]; then
+                echo "❌ Backend KO après 50s"
+                docker logs spiderhome_backend || true
+                exit 1
+              fi
+            done
+
+            echo "🩺 Vérification frontend"
+            if ! curl -fs http://localhost:5175/health >/dev/null; then
+              echo "❌ Frontend KO"
+              docker logs spiderhome_frontend || true
+              exit 1
+            fi
+
             echo "✅ Déploiement SpiderHome OK"
 
       - name: Telegram success
