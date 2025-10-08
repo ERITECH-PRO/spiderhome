@@ -137,6 +137,23 @@ function setCache(key, data) {
   });
 }
 
+// Invalidation simple du cache lié aux produits publics
+function invalidateProductsCache() {
+  try {
+    // Supprimer toutes les entrées de cache des routes produits publiques
+    for (const key of cache.keys()) {
+      if (key.startsWith('products_') || key.startsWith('product_')) {
+        cache.delete(key);
+      }
+    }
+    // Rafraîchir le cache de préchargement
+    if (preloadCache) {
+      preloadCache.products = null;
+      preloadCache.lastUpdate = null;
+    }
+  } catch {}
+}
+
 // Nettoyer le cache périodiquement
 setInterval(() => {
   const now = Date.now();
@@ -192,10 +209,41 @@ app.use('/api/admin', (req, res, next) => {
 // Routes Products
 app.get('/api/admin/products', getProducts);
 app.get('/api/admin/products/:id', getProduct);
-app.post('/api/admin/products', createProduct);
-app.put('/api/admin/products/:id', updateProduct);
-app.delete('/api/admin/products/:id', deleteProduct);
-app.patch('/api/admin/products/:id/visibility', updateProductVisibility);
+app.post('/api/admin/products', async (req, res) => {
+  const originalSend = res.json.bind(res);
+  res.json = function(data) {
+    invalidateProductsCache();
+    return originalSend(data);
+  };
+  await createProduct(req, res);
+});
+
+app.put('/api/admin/products/:id', async (req, res) => {
+  const originalSend = res.json.bind(res);
+  res.json = function(data) {
+    invalidateProductsCache();
+    return originalSend(data);
+  };
+  await updateProduct(req, res);
+});
+
+app.delete('/api/admin/products/:id', async (req, res) => {
+  const originalSend = res.json.bind(res);
+  res.json = function(data) {
+    invalidateProductsCache();
+    return originalSend(data);
+  };
+  await deleteProduct(req, res);
+});
+
+app.patch('/api/admin/products/:id/visibility', async (req, res) => {
+  const originalSend = res.json.bind(res);
+  res.json = function(data) {
+    invalidateProductsCache();
+    return originalSend(data);
+  };
+  await updateProductVisibility(req, res);
+});
 
 // Routes Categories (Admin)
 app.get('/api/admin/categories', async (req, res) => {
