@@ -52,7 +52,7 @@ const Products = () => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/products');
+        const response = await fetch('/api/products?limit=5000&page=1');
         if (!response.ok) {
           throw new Error('Erreur lors du chargement des produits');
         }
